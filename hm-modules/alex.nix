@@ -1,5 +1,8 @@
-{ pkgs, ... }:
+{ pkgs, inputs, ... }:
 {
+  # Импортируем модуль plasma-manager
+  imports = [ inputs.plasma-manager.homeManagerModules.default ];
+
   home.packages = with pkgs; [ firefox ];
 
   programs.git = {
@@ -7,21 +10,23 @@
     userName = "Alex";
     userEmail = "skardizone@gmail.com";
   };
-
-  # Правильная конфигурация для включения ssh-agent в Home Manager
   services.ssh-agent.enable = true;
 
-  home.file.".config/plasma-localerc" = {
-    text = ''
-      [Formats]
-      LANG=ru_RU.UTF-8
-      [Translations]
-      LANG=ru_RU.UTF-8
-    '';
-  };
-
-  home.file.".config/plasma-org.kde.plasma.desktop-appletsrc".text = ''
-    [Containments][2][Applets][3][Configuration][General]
-    launchers=applications:systemsettings.desktop,applications:org.kde.konsole.desktop,applications:org.kde.dolphin.desktop
+  home.file.".config/plasma-localerc".text = ''
+    [Formats]
+    LANG=ru_RU.UTF-8
+    [Translations]
+    LANG=ru_RU.UTF-8
   '';
+
+  # Финальная, правильная конфигурация панели задач через plasma-manager
+  plasma.panels."Панель".widgets = [
+    "org.kde.plasma.kicker.desktop" # Пуск
+    "systemsettings.desktop"          # Настройки
+    "org.kde.konsole.desktop"         # Консоль
+    "org.kde.dolphin.desktop"         # Dolphin
+    "appimagekit_972a71f0a155c4a56973305b0797321c-obsidian.desktop" # Obsidian
+    "firefox.desktop"                 # Firefox
+    "telegramdesktop.desktop"         # Telegram
+  ];
 }

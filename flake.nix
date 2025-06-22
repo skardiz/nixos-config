@@ -7,12 +7,19 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # --- НОВАЯ ЗАВИСИМОСТЬ ---
+    plasma-manager = {
+      url = "github:nix-community/plasma-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, ... }@inputs: {
+  outputs = { self, nixpkgs, home-manager, plasma-manager, ... }@inputs: {
     nixosConfigurations = {
       shershulya = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
+        # --- ПЕРЕДАЕМ ЗАВИСИМОСТЬ В МОДУЛИ ---
+        specialArgs = { inherit inputs; };
         modules = [
           ./hardware-configuration.nix
           ./modules/system.nix
