@@ -3,7 +3,7 @@
   nixpkgs.config.allowUnfree = true;
   system.stateVersion = "25.11";
 
-  # Настройки локализации и языка системы
+  # Настройки языка и локали
   i18n.defaultLocale = "ru_RU.UTF-8";
   console.keyMap = "ru";
 

@@ -1,5 +1,6 @@
 { pkgs, ... }:
 {
+  # Создаем группу для управления конфигурацией
   users.groups.nixos-config = {};
 
   users.users = {
@@ -13,9 +14,9 @@
     };
   };
 
-  # Добавляем эту секцию для настройки поведения Home Manager
+  # Глобальные настройки Home Manager
   home-manager = {
-    # Указываем расширение для бэкапов. 'bak' — хороший выбор.
+    # Решает проблему конфликта файлов, создавая бэкапы
     backupFileExtension = "bak";
     users = {
       alex = { imports = [ ../hm-modules/common.nix ../hm-modules/alex.nix ]; };

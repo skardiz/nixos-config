@@ -1,5 +1,6 @@
 { ... }:
 {
+  # Настройки графического сервера
   services.xserver = {
     enable = true;
     xkb = {
@@ -8,7 +9,7 @@
     };
   };
 
-  # Перемещаем опции на верхний уровень в `services`
-  services.displayManager.sddm.enable = true;
+  # Настройки окружения рабочего стола и менеджера входа
   services.desktopManager.plasma6.enable = true;
+  services.displayManager.sddm.enable = true;
 }
