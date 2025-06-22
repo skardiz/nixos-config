@@ -1,7 +1,7 @@
 { pkgs, inputs, ... }:
 {
-  # Правильный путь для импорта модуля
-  imports = [ inputs.plasma-manager.homeManagerModules.plasmaManager ];
+  # Правильный путь для импорта модуля с кавычками
+  imports = [ inputs.plasma-manager.homeManagerModules."plasma-manager" ];
 
   home.packages = with pkgs; [ firefox ];
 
