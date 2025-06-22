@@ -25,21 +25,22 @@
       {
         location = "bottom";
         widgets = [
-          "org.kde.plasma.kicker", # Меню "Пуск"
+          # Элементы списка разделяются пробелами, НЕ запятыми
+          "org.kde.plasma.kicker"
           {
             name = "org.kde.plasma.icontasks";
             config.General.launchers = [
+              # Элементы этого списка также разделяются пробелами
               "applications:systemsettings.desktop"
               "applications:org.kde.konsole.desktop"
               "applications:org.kde.dolphin.desktop"
-              # --- ИСПОЛЬЗУЕМ ТОЧНЫЕ ИМЕНА ИЗ ВАШЕГО ВЫВОДА ---
-              "applications:obsidian.desktop"         # Правильное имя, которое вы нашли
+              "applications:obsidian.desktop"
               "applications:firefox.desktop"
-              "applications:org.telegram.desktop.desktop" # Новое, точное имя для Telegram
+              "applications:org.telegram.desktop.desktop"
             ];
-          },
-          "org.kde.plasma.systemtray", # Системный трей
-          "org.kde.plasma.digitalclock" # Цифровые часы
+          }
+          "org.kde.plasma.systemtray"
+          "org.kde.plasma.digitalclock"
         ];
       }
     ];
