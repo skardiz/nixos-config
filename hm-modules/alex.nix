@@ -2,7 +2,11 @@
 {
   imports = [ inputs.plasma-manager.homeManagerModules."plasma-manager" ];
 
-  home.packages = with pkgs; [ firefox ];
+  home.packages = with pkgs; [
+    # Пакет firefox теперь будет управляться через programs.firefox,
+    # поэтому его можно убрать отсюда, если он был здесь.
+    # Но он у вас был установлен глобально, так что все в порядке.
+  ];
 
   programs.git = {
     enable = true;
@@ -18,19 +22,34 @@
     LANG=ru_RU.UTF-8
   '';
 
-  # Финальная, 100% правильная конфигурация панели задач через plasma-manager
+  # Декларативная настройка Firefox
+  programs.firefox = {
+    enable = true;
+    profiles.alex = {
+      isDefault = true;
+      extensions = with pkgs.nur.repos.rycee.firefox-addons; [
+        # Устанавливаем русский языковой пакет как расширение
+        { package = pkgs.firefox-i18n-ru; }
+      ];
+      # Здесь же можно настраивать и другие вещи, например:
+      # settings = {
+      #   "browser.startup.homepage" = "https://nixos.org";
+      #   "browser.search.region" = "RU";
+      # };
+    };
+  };
+
+  # Конфигурация панели задач через plasma-manager
   programs.plasma = {
     enable = true;
     panels = [
       {
         location = "bottom";
         widgets = [
-          # Элементы списка разделяются пробелами, НЕ запятыми
           "org.kde.plasma.kicker"
           {
             name = "org.kde.plasma.icontasks";
             config.General.launchers = [
-              # Элементы этого списка также разделяются пробелами
               "applications:systemsettings.desktop"
               "applications:org.kde.konsole.desktop"
               "applications:org.kde.dolphin.desktop"
