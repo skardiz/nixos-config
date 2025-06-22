@@ -1,10 +1,14 @@
 { pkgs, ... }:
 {
-  # Включаем экспериментальные функции для всей системы
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
   nixpkgs.config.allowUnfree = true;
   system.stateVersion = "25.11";
+
+  # Устанавливаем наш кастомный скрипт как системный пакет
+  environment.systemPackages = with pkgs; [
+    (writeShellScriptBin "rebuild" (builtins.readFile ../scripts/rebuild.sh))
+  ];
 
   i18n.defaultLocale = "ru_RU.UTF-8";
   console.keyMap = "ru";
