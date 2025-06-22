@@ -1,13 +1,15 @@
 # /home/alex/nixos-config/hm-modules/alex/firefox.nix
-{ pkgs, ... }:
+{ ... }:
 {
   programs.firefox = {
     enable = true;
+    # Указываем русский языковой пакет напрямую
+    languagePacks = [ "ru" ];
+
     profiles.alex = {
       isDefault = true;
-      extensions = with pkgs.nur.repos.rycee.firefox-addons; [
-        { package = pkgs.firefox-i18n-ru; }
-      ];
+      # Здесь можно будет добавлять *настоящие* расширения, если понадобится
+      # extensions = with pkgs.nur.repos.rycee.firefox-addons; [ ... ];
     };
   };
 }
