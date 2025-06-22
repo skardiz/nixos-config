@@ -2,24 +2,22 @@
 {
   services.pipewire = { enable = true; pulse.enable = true; };
 
-  # Точная настройка аудиоустройств по умолчанию через WirePlumber
+  # Минимально необходимая настройка: повышаем приоритет нужных устройств
   environment.etc."wireplumber/main.lua.d/51-default-devices.lua" = {
     text = ''
-      -- Правило 1: Установить высокий приоритет для встроенного аудиовыхода
+      -- Правило 1: Сделать "Встроенное аудио" выходом по умолчанию
       rule = {
-        matches = { { { "media.class", "equals", "Audio/Sink" }, { "node.description", "equals", "Built-in Audio Analog Stereo" } } },
+        matches = {
+          { "node.name", "equals", "alsa_output.pci-0000_00_1f.3.analog-stereo" }
+        },
         apply_properties = { ["node.priority"] = 2001 }
       }
 
-      -- Правило 2: Принудительно понизить приоритет для аудиовыхода Razer Seiren
+      -- Правило 2: Сделать "Razer Seiren Pro" микрофоном по умолчанию
       rule = {
-        matches = { { { "media.class", "equals", "Audio/Sink" }, { "node.description", "equals", "Razer Seiren Pro Analog Stereo" } } },
-        apply_properties = { ["node.priority"] = 1 } -- Очень низкий приоритет
-      }
-
-      -- Правило 3: Установить высокий приоритет для микрофона Razer Seiren
-      rule = {
-        matches = { { { "media.class", "equals", "Audio/Source" }, { "node.description", "equals", "Razer Seiren Pro Analog Stereo" } } },
+        matches = {
+          { "node.name", "equals", "alsa_input.usb-Razer_Inc._Razer_Seiren_Pro_UC1712132400427-00.analog-stereo" }
+        },
         apply_properties = { ["node.priority"] = 2001 }
       }
     '';
