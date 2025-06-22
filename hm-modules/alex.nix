@@ -1,22 +1,23 @@
 { pkgs, ... }:
 {
-  # Принудительно устанавливаем русский язык для сессии пользователя
-  home.language.base = "ru_RU.UTF-8";
+  # Удаляем home.language.base, так как будем использовать более прямой метод
 
-  home.packages = with pkgs; [
-    firefox
-  ];
+  home.packages = with pkgs; [ firefox ];
 
-  programs.git = {
-    enable = true;
-    userName = "Alex";
-    userEmail = "skardizone@gmail.com";
+  programs.git = { enable = true; userName = "Alex"; userEmail = "skardizone@gmail.com"; };
+
+  # Прямое управление файлом конфигурации локали KDE
+  home.file.".config/plasma-localerc" = {
+    text = ''
+      [Formats]
+      LANG=ru_RU.UTF-8
+
+      [Translations]
+      LANG=ru_RU.UTF-8
+    '';
   };
 
-  # Закрепление значков на панели задач.
-  # ПРИМЕЧАНИЕ: Если это не сработает, откройте файл
-  # ~/.config/plasma-org.kde.plasma.desktop-appletsrc
-  # и найдите правильные номера для [Containments][X][Applets][Y]
+  # Конфигурация панели задач остается прежней
   home.file.".config/plasma-org.kde.plasma.desktop-appletsrc".text = ''
     [Containments][2][Applets][3][Configuration][General]
     launchers=applications:systemsettings.desktop,applications:org.kde.konsole.desktop,applications:org.kde.dolphin.desktop
