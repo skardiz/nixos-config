@@ -5,7 +5,7 @@
   nixpkgs.config.allowUnfree = true;
   system.stateVersion = "25.11";
 
-  # Устанавливаем наш кастомный скрипт как системный пакет
+  # Устанавливаем наш кастомный скрипт как системный пакет gg
   environment.systemPackages = with pkgs; [
     (writeShellScriptBin "rebuild" (builtins.readFile ../scripts/rebuild.sh))
   ];
