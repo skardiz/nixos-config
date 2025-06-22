@@ -8,11 +8,8 @@
     userEmail = "skardizone@gmail.com";
   };
 
-  # Правильная конфигурация для включения ssh-agent
-  programs.ssh = {
-    enable = true;
-    agent.enable = true;
-  };
+  # Правильная конфигурация для включения ssh-agent в Home Manager
+  services.ssh-agent.enable = true;
 
   home.file.".config/plasma-localerc" = {
     text = ''
