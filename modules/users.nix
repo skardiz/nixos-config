@@ -1,5 +1,3 @@
-# /etc/nixos/modules/users.nix
-# Определяет системных пользователей и связывает их с конфигурациями Home Manager.
 { pkgs, ... }:
 {
   users.users = {

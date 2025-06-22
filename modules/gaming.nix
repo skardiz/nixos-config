@@ -1,5 +1,3 @@
-# /etc/nixos/modules/gaming.nix
-# Все, что нужно для игр: Steam и системные твики.
 { pkgs, ... }:
 {
   environment.sessionVariables = { MANGOHUD = "1"; };

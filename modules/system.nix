@@ -1,13 +1,14 @@
-# /etc/nixos/modules/system.nix
 { pkgs, ... }:
 {
   nixpkgs.config.allowUnfree = true;
   system.stateVersion = "25.11";
 
+  # Настройки локализации и языка системы
+  i18n.defaultLocale = "ru_RU.UTF-8";
+  console.keyMap = "ru";
+
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-
-  # boot.kernelPackages = pkgs.linuxPackages_cachyos; # УДАЛЕНО. Система будет использовать ядро по умолчанию.
 
   networking.hostName = "shershulya";
   networking.networkmanager.enable = true;

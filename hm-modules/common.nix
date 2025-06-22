@@ -1,18 +1,13 @@
-# /etc/nixos/hm-modules/common.nix
-# Общие настройки и программы для всех пользователей.
 { pkgs, ... }:
 {
-  # ДОБАВЛЕНО: Глобально разрешаем несвободные пакеты ДЛЯ HOME MANAGER.
-  # Это необходимо для Obsidian, Chrome, Zoom и т.д.
+  # Возвращаем эту строку, чтобы разрешить несвободные пакеты
+  # именно для окружения Home Manager.
   nixpkgs.config.allowUnfree = true;
 
   home.stateVersion = "25.11";
 
   home.packages = with pkgs; [
     telegram-desktop
-    obsidian
-    htop
+    obsidian # <-- Пакет, вызвавший ошибку
   ];
-
-  programs.git.enable = true;
 }

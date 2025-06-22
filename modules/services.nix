@@ -1,5 +1,3 @@
-# /etc/nixos/modules/services.nix
-# Конфигурация системных служб.
 { ... }:
 {
   services.pipewire = {
