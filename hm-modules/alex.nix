@@ -1,7 +1,7 @@
 { pkgs, inputs, ... }:
 {
-  # Импортируем модуль plasma-manager
-  imports = [ inputs.plasma-manager.homeManagerModules.default ];
+  # Правильный путь для импорта модуля
+  imports = [ inputs.plasma-manager.homeManagerModules.plasmaManager ];
 
   home.packages = with pkgs; [ firefox ];
 
@@ -19,7 +19,7 @@
     LANG=ru_RU.UTF-8
   '';
 
-  # Финальная, правильная конфигурация панели задач через plasma-manager
+  # Конфигурация панели задач через plasma-manager
   plasma.panels."Панель".widgets = [
     "org.kde.plasma.kicker.desktop" # Пуск
     "systemsettings.desktop"          # Настройки
