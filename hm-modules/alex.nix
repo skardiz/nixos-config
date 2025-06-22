@@ -1,34 +1,39 @@
+{ pkgs, inputs, ... }:
 {
-  description = "Моя финальная, чистая система на стандартном ядре";
+  imports = [ inputs.plasma-manager.homeManagerModules."plasma-manager" ];
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    home-manager = {
-      url = "github:nix-community/home-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    plasma-manager = {
-      url = "github:nix-community/plasma-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+  home.packages = with pkgs; [ firefox ];
+
+  programs.git = {
+    enable = true;
+    userName = "Alex";
+    userEmail = "skardizone@gmail.com";
   };
+  services.ssh-agent.enable = true;
 
-  outputs = { self, nixpkgs, home-manager, plasma-manager, ... }@inputs: {
-    nixosConfigurations = {
-      shershulya = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        specialArgs = { inherit inputs; };
-        modules = [
-          ./hardware-configuration.nix
-          ./modules/system.nix
-          ./modules/users.nix
-          ./modules/desktop.nix
-          ./modules/nvidia.nix
-          ./modules/gaming.nix
-          ./modules/services.nix
-          home-manager.nixosModules.home-manager
+  home.file.".config/plasma-localerc".text = ''
+    [Formats]
+    LANG=ru_RU.UTF-8
+    [Translations]
+    LANG=ru_RU.UTF-8
+  '';
+
+  # Финальная, 100% правильная конфигурация панели задач через plasma-manager
+  programs.plasma = {
+    enable = true;
+    panels = [
+      {
+        location = "bottom"; # Используем 'location', а не 'name'
+        widgets = [
+          "org.kde.plasma.kicker.desktop" # Пуск
+          "systemsettings.desktop"          # Настройки
+          "org.kde.konsole.desktop"         # Консоль
+          "org.kde.dolphin.desktop"         # Dolphin
+          "appimagekit_972a71f0a155c4a56973305b0797321c-obsidian.desktop" # Obsidian
+          "firefox.desktop"                 # Firefox
+          "telegramdesktop.desktop"         # Telegram
         ];
-      };
-    };
+      }
+    ];
   };
 }
