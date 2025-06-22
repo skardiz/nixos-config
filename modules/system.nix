@@ -1,9 +1,11 @@
 { pkgs, ... }:
 {
+  # Включаем экспериментальные функции для всей системы
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
   nixpkgs.config.allowUnfree = true;
   system.stateVersion = "25.11";
 
-  # Настройки языка и локали
   i18n.defaultLocale = "ru_RU.UTF-8";
   console.keyMap = "ru";
 
