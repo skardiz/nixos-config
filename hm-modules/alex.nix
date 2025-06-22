@@ -25,27 +25,21 @@
       {
         location = "bottom";
         widgets = [
-          # 1. Меню "Пуск"
-          "org.kde.plasma.kicker"
-
-          # 2. Менеджер задач с закрепленными приложениями
+          "org.kde.plasma.kicker", # Меню "Пуск"
           {
             name = "org.kde.plasma.icontasks";
             config.General.launchers = [
               "applications:systemsettings.desktop"
               "applications:org.kde.konsole.desktop"
               "applications:org.kde.dolphin.desktop"
-              "applications:appimagekit_972a71f0a155c4a56973305b0797321c-obsidian.desktop"
+              # --- ИСПОЛЬЗУЕМ ТОЧНЫЕ ИМЕНА ИЗ ВАШЕГО ВЫВОДА ---
+              "applications:obsidian.desktop"         # Правильное имя, которое вы нашли
               "applications:firefox.desktop"
-              "applications:telegramdesktop.desktop"
+              "applications:org.telegram.desktop.desktop" # Новое, точное имя для Telegram
             ];
-          }
-
-          # 3. Системный трей
-          "org.kde.plasma.systemtray"
-
-          # 4. Цифровые часы
-          "org.kde.plasma.digitalclock"
+          },
+          "org.kde.plasma.systemtray", # Системный трей
+          "org.kde.plasma.digitalclock" # Цифровые часы
         ];
       }
     ];
