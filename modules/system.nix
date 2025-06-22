@@ -5,7 +5,7 @@
   nixpkgs.config.allowUnfree = true;
   system.stateVersion = "25.11";
 
-  boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.kernelPackages = pkgs.linuxPackages_zen;
 
   # Устанавливаем наш кастомный скрипт как системный пакет gg
   environment.systemPackages = with pkgs; [
