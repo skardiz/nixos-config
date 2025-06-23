@@ -19,7 +19,7 @@
       shershulya = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         # --- ПЕРЕДАЕМ ЗАВИСИМОСТЬ В МОДУЛИ ---
-        specialArgs = { inherit inputs; };
+        specialArgs = { inherit inputs self; };
         modules = [
           ./hardware-configuration.nix
           ./modules/system.nix
