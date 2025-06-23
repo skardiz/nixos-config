@@ -4,5 +4,6 @@
     ./git.nix
     ./firefox.nix
     ./plasma.nix
+    ./bash.nix
   ];
 }
