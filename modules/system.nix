@@ -2,23 +2,23 @@
 { pkgs, lib, config, self, ... }:
 
 let
-  # --- Блок для создания метки поколения (ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ) ---
+  # --- Блок для создания простой и чистой метки ---
 
-  # 1. Получаем короткий хэш коммита.
-  commitHash = self.shortRev or "dirty";
-
-  # 2. Получаем дату последнего коммита в виде строки "YYYYMMDDHHMMSS".
+  # 1. Получаем дату и время последнего коммита.
   dateString = self.lastModifiedDate or "19700101000000";
-  dateParts = builtins.match "(.{4})(.{2})(.{2}).*" dateString;
-  formattedDate =
-    if dateParts != null
-    then "${builtins.elemAt dateParts 2}.${builtins.elemAt dateParts 1}.${builtins.elemAt dateParts 0}"
-    else "unknown-date";
+  dateParts = builtins.match "(.{4})(.{2})(.{2})(.{2})(.{2}).*" dateString;
 
-  # --- ИСПРАВЛЕНИЕ ЗДЕСЬ ---
-  # 3. Собираем финальную строку, используя ТОЛЬКО разрешенные символы.
-  #    Заменяем пробелы и скобки на дефисы.
-  nixosLabel = "${config.system.stateVersion}-${formattedDate}-${commitHash}";
+  # 2. Форматируем строку в "ЧЧ:ММ-ДД.ММ", используя только разрешенные символы.
+  nixosLabel =
+    if dateParts != null
+    then
+      let
+        day = builtins.elemAt dateParts 2;
+        month = builtins.elemAt dateParts 1;
+        hour = builtins.elemAt dateParts 3;
+        minute = builtins.elemAt dateParts 4;
+      in "${hour}:${minute}-${day}.${month}"
+    else "unknown-datetime"; # Запасной вариант
 
 in
 {
@@ -58,7 +58,7 @@ in
   nixpkgs.config.allowUnfree = true;
   system.stateVersion = "25.11";
 
-  # Устанавливаем нашу кастомную, валидную метку.
+  # Устанавливаем нашу простую и чистую метку.
   system.nixos.label = nixosLabel;
 
   time.timeZone = "Europe/Moscow";
