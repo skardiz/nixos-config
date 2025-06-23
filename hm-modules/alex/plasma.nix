@@ -16,7 +16,7 @@
       {
         location = "bottom";
         widgets = [
-          "org.kde.plasma.kicker"
+          "org.kde.plasma.kickoff" # Используем привычное меню с вкладками
           {
             name = "org.kde.plasma.icontasks";
             config.General.launchers = [
