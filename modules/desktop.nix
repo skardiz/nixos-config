@@ -1,3 +1,4 @@
+# modules/desktop.nix
 { ... }:
 {
   services.xserver = {
@@ -7,6 +8,13 @@
 
   services.desktopManager.plasma6.enable = true;
   services.displayManager.sddm.enable = true;
+
+  # --- Автологин ---
+  # Эта секция включает автоматический вход в систему для указанного пользователя.
+  services.displayManager.autoLogin = {
+    enable = true;
+    user = "alex";
+  };
 
   # Правильный и надежный способ установить язык для SDDM и всей сессии
   systemd.services.display-manager.environment = {
