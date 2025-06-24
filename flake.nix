@@ -28,6 +28,7 @@
           ./modules/nvidia.nix
           ./modules/gaming.nix
           ./modules/services.nix
+          ./modules/hearthstone.nix
           home-manager.nixosModules.home-manager
         ];
       };
