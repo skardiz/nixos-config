@@ -8,7 +8,7 @@
     powerManagement.enable = true;
     open = false; # Используем проприетарные драйверы
     nvidiaSettings = true;
-    package = config.boot.kernelPackages.nvidiaPackages.stable;
+    package = config.boot.kernelPackages.nvidiaPackages.beta;
 
     # Убираем nvidiaConfig, так как powerManagement.enable должен управлять этим
     # Если проблемы сохранятся, мы вернемся к более тонким настройкам
