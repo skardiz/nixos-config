@@ -9,7 +9,17 @@
   # nixpkgs.overlays = [ ... ];
 
   home.packages = with pkgs; [
-    telegram-desktop
+    collabora-online
+    cryptpad
+    freeoffice
+    google-chrome
+    kdePackages.calligra
+    libreoffice
     obsidian
+    onlyoffice-bin
+    telegram-desktop
+    #wpsoffice
+    zapzap
+    zoom-us
   ];
 }
