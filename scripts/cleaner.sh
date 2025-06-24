@@ -43,17 +43,21 @@ ok "Очистка поколений завершена."
 msg "2. Запуск сборщика мусора Nix..."
 BEFORE_GC_SIZE=$(sudo du -sh /nix/store | cut -f1)
 GC_OUTPUT=$(sudo nix-collect-garbage -v 2>&1)
-DELETED_PATHS=$(echo "$GC_OUTPUT" | grep 'paths deleted' | awk '{print $1 " пути(ей) удалено"}')
-FREED_MIB=$(echo "$GC_OUTPUT" | grep 'MiB freed' | awk '{print "освобождено " $1 " MiB"}')
+DELETED_PATHS=$(echo "$GC_OUTPUT" | grep 'paths deleted' | awk '{print $1}' || echo "0")
+FREED_MIB=$(echo "$GC_OUTPUT" | grep 'MiB freed' | awk '{print $1}' || echo "0.00")
 AFTER_GC_SIZE=$(sudo du -sh /nix/store | cut -f1)
-SUMMARY_NIX_GC="Сборка мусора: $DELETED_PATHS, $FREED_MIB. Размер: $BEFORE_GC_SIZE -> $AFTER_GC_SIZE."
+SUMMARY_NIX_GC="Удалено $DELETED_PATHS пути(ей), освобождено ${FREED_MIB} MiB. Размер: $BEFORE_GC_SIZE -> $AFTER_GC_SIZE."
 ok "Сборка мусора Nix завершена."
 
 # --- Этап 3: Оптимизация хранилища Nix ---
 msg "3. Оптимизация хранилища Nix..."
 OPTIMISE_OUTPUT=$(sudo nix-store --optimise -vv 2>&1)
-OPTIMISE_SAVED=$(echo "$OPTIMISE_OUTPUT" | grep 'hard linking saves' | sed 's/^[ \t]*//' || echo "Нет данных об экономии.")
-SUMMARY_NIX_OPTIMISE="Оптимизация: $OPTIMISE_SAVED."
+OPTIMISE_SAVED_LINE=$(echo "$OPTIMISE_OUTPUT" | grep 'hard linking saves' || echo "") # Извлекаем всю строку
+if [ -n "$OPTIMISE_SAVED_LINE" ]; then # Если строка не пустая
+    SUMMARY_NIX_OPTIMISE="Оптимизация: $(echo "$OPTIMISE_SAVED_LINE" | sed 's/^[ \t]*//')."
+else
+    SUMMARY_NIX_OPTIMISE="Оптимизация: Нет новых заметных оптимизаций." # Если строка пустая
+fi
 ok "Оптимизация хранилища Nix завершена."
 
 # --- Этап 4: Обслуживание Btrfs ---
@@ -66,41 +70,65 @@ else
     msg "4. Запуск балансировки Btrfs ($BTRFS_ROOT_MOUNTPOINT)..."
     warn "Это может быть очень длительная операция. Вы будете видеть прогресс."
     BALANCE_OUTPUT=$(sudo btrfs balance start -v --full-balance "$BTRFS_ROOT_MOUNTPOINT" 2>&1)
-    BALANCE_DONE_MSG=$(echo "$BALANCE_OUTPUT" | grep 'Done, had to relocate' | sed 's/^[ \t]*//' || echo "Завершено без подробностей.")
-    SUMMARY_BTRFS_BALANCE="Балансировка: $BALANCE_DONE_MSG."
+    BALANCE_DONE_MSG=$(echo "$BALANCE_OUTPUT" | grep 'Done, had to relocate' || echo "Балансировка завершена (без подробностей).")
+    SUMMARY_BTRFS_BALANCE="Балансировка: $(echo "$BALANCE_DONE_MSG" | sed 's/^[ \t]*//')."
     ok "Балансировка Btrfs завершена."
 
     msg "5. Запуск проверки Btrfs (scrub) ($BTRFS_ROOT_MOUNTPOINT)..."
     warn "Это может быть длительная операция. Скрипт будет ждать завершения."
     sudo btrfs scrub start -B -d "$BTRFS_ROOT_MOUNTPOINT"
-    SCRUB_STATUS=$(sudo btrfs scrub status "$BTRFS_ROOT_MOUNTPOINT")
-    SCRUB_ERRORS=$(echo "$SCRUB_STATUS" | grep 'Error summary' | sed 's/^[ \t]*//')
-    SCRUB_DURATION=$(echo "$SCRUB_STATUS" | grep 'Duration' | sed 's/^[ \t]*//')
-    SUMMARY_BTRFS_SCRUB="Scrub: $SCRUB_ERRORS. $SCRUB_DURATION."
+    SCRUB_STATUS_FULL=$(sudo btrfs scrub status "$BTRFS_ROOT_MOUNTPOINT")
+    SCRUB_SUMMARY_LINE=$(echo "$SCRUB_STATUS_FULL" | grep 'Error summary' | sed 's/^[ \t]*//')
+    SCRUB_DURATION_LINE=$(echo "$SCRUB_STATUS_FULL" | grep 'Duration' | sed 's/^[ \t]*//')
+    SUMMARY_BTRFS_SCRUB="Scrub: $SCRUB_SUMMARY_LINE. $SCRUB_DURATION_LINE."
     ok "Проверка Btrfs (scrub) завершена."
 fi
 
 # --- Этап 5: Очистка логов Journald ---
-msg "6. Очистка старых логов Journald..."
-FREED_JOURNAL_OUTPUT=$(sudo journalctl --vacuum-size=500M | grep 'freed' | head -n 1)
-FREED_JOURNAL=$(echo "$FREED_JOURNAL_OUTPUT" | awk '{print $3 " " $4}')
-FINAL_JOURNAL_SIZE=$(journalctl --disk-usage | awk '{print $4}')
-SUMMARY_JOURNALD="Journald логи: освобождено $FREED_JOURNAL. Текущий размер: $FINAL_JOURNAL_SIZE."
+msg "6. Очистка старых логов Journald (оставляем не более 500 МБ)..."
+
+# Получаем размер до очистки
+# Извлекаем размер из "Journals take up 123.4M on disk."
+BEFORE_JOURNAL_SIZE_FULL=$(journalctl --disk-usage)
+BEFORE_JOURNAL_SIZE=$(echo "$BEFORE_JOURNAL_SIZE_FULL" | awk '{print $NF}')
+
+VACUUM_OUTPUT=$(sudo journalctl --vacuum-size=500M 2>&1)
+
+# Проверяем, было ли что-то удалено (строка "freed" в выводе)
+FREED_JOURNAL_LINE=$(echo "$VACUUM_OUTPUT" | grep 'freed' | head -n 1 || echo "")
+if [ -n "$FREED_JOURNAL_LINE" ]; then
+    # Извлекаем только размер освобожденного
+    FREED_JOURNAL=$(echo "$FREED_JOURNAL_LINE" | awk '{print $3 $4}')
+    VACUUM_MSG="Освобождено $FREED_JOURNAL."
+else
+    VACUUM_MSG="Ничего не освобождено (логи уже в пределах лимита)."
+fi
+
+# Получаем размер после очистки
+AFTER_JOURNAL_SIZE_FULL=$(journalctl --disk-usage)
+AFTER_JOURNAL_SIZE=$(echo "$AFTER_JOURNAL_SIZE_FULL" | awk '{print $NF}')
+
+SUMMARY_JOURNALD="Логи: $VACUUM_MSG Текущий размер: $AFTER_JOURNAL_SIZE."
 ok "Очистка логов Journald завершена."
 
 # --- Финальная сводка ---
 echo -e "\n\e[1;34m====================================\e[0m"
 echo -e "\e[1;34m=== СВОДКА ОЧИСТКИ И ОПТИМИЗАЦИИ ===\e[0m"
 echo -e "\e[1;34m====================================\e[0m"
+
 echo -e "\n\e[1;36m1. Поколения Nix:\e[0m"
 echo -e "  - $SUMMARY_NIX_GEN_SYS"
 echo -e "  - $SUMMARY_NIX_GEN_HM"
+
 echo -e "\n\e[1;36m2. Хранилище Nix:\e[0m"
 echo -e "  - $SUMMARY_NIX_GC"
 echo -e "  - $SUMMARY_NIX_OPTIMISE"
+
 echo -e "\n\e[1;36m3. Файловая система Btrfs:\e[0m"
 echo -e "  - $SUMMARY_BTRFS_BALANCE"
 echo -e "  - $SUMMARY_BTRFS_SCRUB"
+
 echo -e "\n\e[1;36m4. Системные логи:\e[0m"
 echo -e "  - $SUMMARY_JOURNALD"
+
 echo -e "\n\e[1;32m✅ Все операции завершены!\e[0m"
