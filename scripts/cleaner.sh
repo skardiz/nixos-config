@@ -9,19 +9,25 @@ YELLOW='\033[33m'
 RED='\033[31m'
 RESET='\033[0m'
 
-msg() { echo -e "\n${GREEN}>>> $1${RESET}"; } # Сообщения в процессе выполнения
-ok() { echo -e "${GREEN}✅ $1${RESET}"; } # Подтверждение шага
+msg() { echo -e "\n${GREEN}>>> $1${RESET}"; }
+ok() { echo -e "${GREEN}✅ $1${RESET}"; }
 warn() { echo -e "\n${YELLOW}⚠️ ВНИМАНИЕ: $1${RESET}"; }
 err() { echo -e "\n${RED}❌ ОШИБКА: $1${RESET}"; }
 
-# Переменные для сбора результатов сводки
+# --- Переменные для сбора результатов сводки ---
 SUMMARY_NIX_GEN_SYS=""
 SUMMARY_NIX_GEN_HM=""
 SUMMARY_NIX_GC=""
 SUMMARY_NIX_OPTIMISE=""
-SUMMARY_BTRFS_BALANCE=""
-SUMMARY_BTRFS_SCRUB=""
 SUMMARY_JOURNALD=""
+# Переменные Btrfs инициализируются как "пропущенные" по умолчанию
+SUMMARY_BTRFS_BALANCE="Пропущено."
+SUMMARY_BTRFS_SCRUB="Пропущено."
+BTRFS_OPERATIONS_PERFORMED=false # Флаг для контроля вывода сводки
+
+# Файл для временного хранения вывода balance
+BALANCE_LOG_FILE="/tmp/btrfs_balance.log"
+trap 'rm -f "$BALANCE_LOG_FILE"' EXIT # Гарантируем удаление лога при выходе
 
 # --- Проверка прав sudo ---
 if ! sudo -v; then
@@ -30,123 +36,115 @@ if ! sudo -v; then
 fi
 ok "Права sudo получены."
 
+# --- ОБЯЗАТЕЛЬНЫЕ ЭТАПЫ ---
+
 # --- Этап 1: Удаление профилей поколений ---
 msg "1. Удаление старых поколений системы и Home Manager..."
 old_gens_sys=$(sudo nix-env --profile /nix/var/nix/profiles/system --list-generations | wc -l)
 old_gens_hm=$(nix-env --profile "$HOME/.local/state/nix/profiles/home-manager" --list-generations | wc -l || echo 0)
-
 sudo nix-env --profile /nix/var/nix/profiles/system --delete-generations +10
 nix-env --profile "$HOME/.local/state/nix/profiles/home-manager" --delete-generations +10 || true
-
 new_gens_sys=$(sudo nix-env --profile /nix/var/nix/profiles/system --list-generations | wc -l)
 new_gens_hm=$(nix-env --profile "$HOME/.local/state/nix/profiles/home-manager" --list-generations | wc -l || echo 0)
 deleted_gens_sys=$((old_gens_sys - new_gens_sys))
 deleted_gens_hm=$((old_gens_hm - new_gens_hm))
-
-SUMMARY_NIX_GEN_SYS="Система: удалено ${deleted_gens_sys} поколений, осталось ${new_gens_sys}."
-SUMMARY_NIX_GEN_HM="Home Manager: удалено ${deleted_gens_hm} поколений, осталось ${new_gens_hm}."
+SUMMARY_NIX_GEN_SYS="Удалено ${deleted_gens_sys} системных поколений, осталось ${new_gens_sys}."
+SUMMARY_NIX_GEN_HM="Удалено ${deleted_gens_hm} поколений Home Manager, осталось ${new_gens_hm}."
 ok "Очистка поколений завершена."
 
 # --- Этап 2: Сборка мусора Nix ---
 msg "2. Запуск сборщика мусора Nix..."
-BEFORE_GC_SIZE=$(sudo du -sh /nix/store | cut -f1)
+BEFORE_GC_SIZE_MB=$(sudo du -sBM /nix/store | sed 's/M$//')
 GC_OUTPUT=$(sudo nix-collect-garbage -v 2>&1)
-
 DELETED_PATHS_COUNT=$(echo "$GC_OUTPUT" | grep 'paths deleted' | awk '{print $1}' || echo "0")
 FREED_MB=$(echo "$GC_OUTPUT" | grep 'MiB freed' | awk '{print $1}' || echo "0.00")
-
-AFTER_GC_SIZE=$(sudo du -sh /nix/store | cut -f1)
-
-SUMMARY_NIX_GC="Удалено ${DELETED_PATHS_COUNT} путей, освобождено ${FREED_MB} MiB. Размер /nix/store: ${BEFORE_GC_SIZE} -> ${AFTER_GC_SIZE}."
+AFTER_GC_SIZE_MB=$(sudo du -sBM /nix/store | sed 's/M$//')
+SUMMARY_NIX_GC="Удалено ${DELETED_PATHS_COUNT} путей, освобождено ${FREED_MB} MiB. Размер /nix/store: ${BEFORE_GC_SIZE_MB} MB -> ${AFTER_GC_SIZE_MB} MB."
 ok "Сборка мусора Nix завершена."
 
 # --- Этап 3: Оптимизация хранилища Nix ---
 msg "3. Оптимизация хранилища Nix..."
 OPTIMISE_OUTPUT=$(sudo nix-store --optimise -vv 2>&1)
-# Ищем строку "note: currently hard linking saves X.XX MiB"
-OPTIMISE_SAVED_LINE=$(echo "$OPTIMISE_OUTPUT" | grep 'hard linking saves' | sed -E 's/^.*(hard linking saves [0-9\.]+\s*(MiB|GiB)).*$/\1/' | head -n 1)
-
+OPTIMISE_SAVED_LINE=$(echo "$OPTIMISE_OUTPUT" | grep -oP 'hard linking saves \d+\.?\d*\s*(MiB|GiB)' | head -n 1)
 if [ -n "$OPTIMISE_SAVED_LINE" ]; then
-    SUMMARY_NIX_OPTIMISE="${OPTIMISE_SAVED_LINE}."
+    SAVED_AMOUNT=$(echo "$OPTIMISE_SAVED_LINE" | sed -E 's/hard linking saves //')
+    SUMMARY_NIX_OPTIMISE="Экономия за счет дедупликации: ${SAVED_AMOUNT}."
 else
     SUMMARY_NIX_OPTIMISE="Не обнаружено новых заметных сэкономленных мест."
 fi
 ok "Оптимизация хранилища Nix завершена."
 
-# --- Этап 4: Обслуживание Btrfs ---
+# --- ИНТЕРАКТИВНЫЙ ВЫБОР ДЛЯ BTRFS ---
 BTRFS_ROOT_MOUNTPOINT=$(findmnt -no TARGET -t btrfs / | head -n 1)
-if [ -z "$BTRFS_ROOT_MOUNTPOINT" ]; then
-    SUMMARY_BTRFS_BALANCE="Пропущено (не Btrfs)."
-    SUMMARY_BTRFS_SCRUB="Пропущено (не Btrfs)."
-    warn "Не удалось определить корневую точку монтирования Btrfs. Пропускаем."
-else
-    # Балансировка
-    msg "4. Запуск балансировки Btrfs ($BTRFS_ROOT_MOUNTPOINT)..."
-    warn "Это может быть очень длительная операция. Вы будете видеть прогресс."
-    BALANCE_OUTPUT=$(sudo btrfs balance start -v --full-balance "$BTRFS_ROOT_MOUNTPOINT" 2>&1)
+if [ -n "$BTRFS_ROOT_MOUNTPOINT" ]; then
+    echo # Пустая строка для отступа
+    read -r -p "Вы хотите выполнить обслуживание Btrfs (balance и scrub)? Это может занять много времени. (y/n) " user_choice
+    echo # Пустая строка для отступа
 
-    # Парсим строку "Done, had to relocate X out of Y chunks"
-    BALANCE_DONE_MSG=$(echo "$BALANCE_OUTPUT" | grep 'Done, had to relocate' | sed -E 's/^.*(Done, had to relocate .*)/\1/' | head -n 1)
-    if [ -n "$BALANCE_DONE_MSG" ]; then
-        SUMMARY_BTRFS_BALANCE="${BALANCE_DONE_MSG}."
+    # Приводим ответ к нижнему регистру для удобства сравнения
+    user_choice_lower=$(echo "$user_choice" | tr '[:upper:]' '[:lower:]')
+
+    if [[ "$user_choice_lower" == "y" || "$user_choice_lower" == "yes" || "$user_choice_lower" == "д" || "$user_choice_lower" == "да" ]]; then
+        BTRFS_OPERATIONS_PERFORMED=true
+
+        # Балансировка
+        msg "4. Запуск балансировки Btrfs ($BTRFS_ROOT_MOUNTPOINT)..."
+        warn "Это может быть очень длительная операция. Вы будете видеть прогресс."
+        sudo btrfs balance start -v --full-balance "$BTRFS_ROOT_MOUNTPOINT" | tee "$BALANCE_LOG_FILE" > /dev/null
+        BALANCE_DONE_MSG=$(grep 'Done, had to relocate' "$BALANCE_LOG_FILE" | sed -E 's/^[[:space:]]*(.*)/\1/' | head -n 1)
+        SUMMARY_BTRFS_BALANCE="Балансировка: ${BALANCE_DONE_MSG:-Завершено без подробностей}."
+        ok "Балансировка Btrfs завершена."
+
+        # Scrub
+        msg "5. Запуск проверки Btrfs (scrub) ($BTRFS_ROOT_MOUNTPOINT)..."
+        warn "Это может быть длительная операция. Скрипт будет ждать завершения."
+        sudo btrfs scrub start -B -d "$BTRFS_ROOT_MOUNTPOINT"
+        SCRUB_STATUS_FULL=$(sudo btrfs scrub status "$BTRFS_ROOT_MOUNTPOINT")
+        SCRUB_ERRORS_RAW=$(echo "$SCRUB_STATUS_FULL" | grep 'Error summary:' | sed -E 's/^[[:space:]]*Error summary:[[:space:]]*(.*)/\1/')
+        SCRUB_ERRORS=$(echo "$SCRUB_ERRORS_RAW" | sed 's/no errors found/не найдено/')
+        SCRUB_DURATION=$(echo "$SCRUB_STATUS_FULL" | grep 'Duration:' | sed -E 's/^[[:space:]]*Duration:[[:space:]]*(.*)/\1/')
+        SUMMARY_BTRFS_SCRUB="Scrub: Ошибки: ${SCRUB_ERRORS}. Длительность: ${SCRUB_DURATION}."
+        ok "Проверка Btrfs (scrub) завершена."
     else
-        SUMMARY_BTRFS_BALANCE="Балансировка завершена (без подробностей)."
+        SUMMARY_BTRFS_BALANCE="Пропущено по выбору пользователя."
+        SUMMARY_BTRFS_SCRUB="Пропущено по выбору пользователя."
+        warn "Обслуживание Btrfs пропущено."
     fi
-    ok "Балансировка Btrfs завершена."
-
-    # Scrub
-    msg "5. Запуск проверки Btrfs (scrub) ($BTRFS_ROOT_MOUNTPOINT)..."
-    warn "Это может быть очень длительная операция. Скрипт будет ждать завершения."
-    sudo btrfs scrub start -B -d "$BTRFS_ROOT_MOUNTPOINT"
-    SCRUB_STATUS_FULL=$(sudo btrfs scrub status "$BTRFS_ROOT_MOUNTPOINT")
-
-    # Извлекаем данные, используя grep и sed с более надежными regex
-    SCRUB_ERRORS=$(echo "$SCRUB_STATUS_FULL" | grep 'Error summary:' | sed -E 's/^[[:space:]]*Error summary:[[:space:]]*(.*)/\1/' | head -n 1)
-    SCRUB_DURATION=$(echo "$SCRUB_STATUS_FULL" | grep 'Duration:' | sed -E 's/^[[:space:]]*Duration:[[:space:]]*(.*)/\1/' | head -n 1)
-
-    SUMMARY_BTRFS_SCRUB="Ошибки: ${SCRUB_ERRORS}. Длительность: ${SCRUB_DURATION}."
-    ok "Проверка Btrfs (scrub) завершена."
+else
+    SUMMARY_BTRFS_BALANCE="Пропущено (файловая система не Btrfs)."
+    SUMMARY_BTRFS_SCRUB="Пропущено (файловая система не Btrfs)."
 fi
 
-# --- Этап 5: Очистка логов Journald ---
+# --- ЗАВЕРШАЮЩИЙ ОБЯЗАТЕЛЬНЫЙ ЭТАП ---
 msg "6. Очистка старых логов Journald..."
-# Получаем размер до очистки
-BEFORE_JOURNAL_SIZE_FULL=$(journalctl --disk-usage)
-BEFORE_JOURNAL_SIZE=$(echo "$BEFORE_JOURNAL_SIZE_FULL" | awk '{print $NF}') # Последнее поле (например, "1.2G")
-
+BEFORE_JOURNAL_SIZE=$(journalctl --disk-usage | grep -oP '\d+\.?\d*[KMGT]?B' | head -n 1)
 VACUUM_OUTPUT=$(sudo journalctl --vacuum-size=500M 2>&1)
-
-# Парсим освобожденное место
-FREED_JOURNAL_AMOUNT=$(echo "$VACUUM_OUTPUT" | grep 'freed' | head -n 1 | sed -E 's/.*freed ([0-9\.]+[KMGT]?B).* from.*/\1/') # Извлекаем только число и единицы
-if [ -z "$FREED_JOURNAL_AMOUNT" ]; then # Если ничего не освободилось, строка будет пустой
-    FREED_JOURNAL_AMOUNT="0B"
-fi
-
-# Получаем финальный размер логов (запрашиваем заново, чтобы быть уверенным)
-AFTER_JOURNAL_SIZE_FULL=$(journalctl --disk-usage)
-AFTER_JOURNAL_SIZE=$(echo "$AFTER_JOURNAL_SIZE_FULL" | awk '{print $NF}') # Последнее поле
-
-SUMMARY_JOURNALD="Освобождено ${FREED_JOURNAL_AMOUNT}. Текущий размер: ${AFTER_JOURNAL_SIZE}."
+FREED_JOURNAL_AMOUNT=$(echo "$VACUUM_OUTPUT" | grep -oP 'freed \d+\.?\d*[KMGT]?B' | head -n 1 | sed 's/freed //')
+AFTER_JOURNAL_SIZE=$(journalctl --disk-usage | grep -oP '\d+\.?\d*[KMGT]?B' | head -n 1)
+SUMMARY_JOURNALD="Освобождено ${FREED_JOURNAL_AMOUNT:-0B}. Текущий размер: ${AFTER_JOURNAL_SIZE}."
 ok "Очистка логов Journald завершена."
 
-# --- Финальная сводка ---
+# --- ФИНАЛЬНАЯ СВОДКА ---
 echo -e "\n${BLUE}====================================${RESET}"
 echo -e "${BLUE}=== СВОДКА ОЧИСТКИ И ОПТИМИЗАЦИИ ===${RESET}"
 echo -e "${BLUE}====================================\n${RESET}"
 
-echo -e "${CYAN}1. Поколения Nix:${RESET}"
-printf "  - Система: %s\n" "$SUMMARY_NIX_GEN_SYS"
+printf "${CYAN}%-25s%s${RESET}\n" "1. Поколения Nix:" ""
+printf "  - Системные: %s\n" "$SUMMARY_NIX_GEN_SYS"
 printf "  - Home Manager: %s\n" "$SUMMARY_NIX_GEN_HM"
 
-echo -e "\n${CYAN}2. Хранилище Nix:${RESET}"
+printf "\n${CYAN}%-25s%s${RESET}\n" "2. Хранилище Nix:" ""
 printf "  - Сборка мусора: %s\n" "$SUMMARY_NIX_GC"
 printf "  - Оптимизация: %s\n" "$SUMMARY_NIX_OPTIMISE"
 
-echo -e "\n${CYAN}3. Файловая система Btrfs:${RESET}"
-printf "  - Балансировка: %s\n" "$SUMMARY_BTRFS_BALANCE"
-printf "  - Scrub: %s\n" "$SUMMARY_BTRFS_SCRUB"
+# Выводим блок Btrfs только если он был выполнен
+if [ "$BTRFS_OPERATIONS_PERFORMED" = true ]; then
+    printf "\n${CYAN}%-25s%s${RESET}\n" "3. Файловая система Btrfs:" ""
+    printf "  - Балансировка: %s\n" "$SUMMARY_BTRFS_BALANCE"
+    printf "  - Scrub: %s\n" "$SUMMARY_BTRFS_SCRUB"
+fi
 
-echo -e "\n${CYAN}4. Системные логи:${RESET}"
+printf "\n${CYAN}%-25s%s${RESET}\n" "4. Системные логи Journald:" ""
 printf "  - %s\n" "$SUMMARY_JOURNALD"
 
 echo -e "\n${GREEN}✅ Все операции завершены!${RESET}"
