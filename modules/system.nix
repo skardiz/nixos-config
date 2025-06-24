@@ -73,5 +73,6 @@ in
 
   environment.systemPackages = with pkgs; [
     (writeShellScriptBin "rebuild" (builtins.readFile ../scripts/rebuild.sh))
+    (writeShellScriptBin "cleaner" (builtins.readFile ../scripts/cleaner.sh))
   ];
 }
