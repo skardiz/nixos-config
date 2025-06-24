@@ -23,9 +23,6 @@ sudo nix-env --profile /nix/var/nix/profiles/system --delete-generations +10
 ok "Системные поколения очищены."
 
 msg "2. Удаление старых поколений Home Manager для пользователя 'alex' (оставляем последние 10)..."
-# --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Указываем правильный путь к профилю Home Manager ---
-# Путь к профилю Home Manager обычно: ~/.local/state/nix/profiles/home-manager
-# Убедитесь, что пользователь, под которым запускается скрипт, имеет доступ к этому пути
 nix-env --profile "$HOME/.local/state/nix/profiles/home-manager" --delete-generations +10
 ok "Поколения Home Manager для 'alex' очищены."
 
@@ -45,16 +42,37 @@ if [ -z "$BTRFS_ROOT_MOUNTPOINT" ]; then
     warn "Не удалось определить корневую точку монтирования Btrfs. Пропускаем обслуживание Btrfs."
 else
     msg "5. Запуск балансировки Btrfs ($BTRFS_ROOT_MOUNTPOINT)..."
-    sudo btrfs balance start "$BTRFS_ROOT_MOUNTPOINT"
-    ok "Балансировка Btrfs запущена в фоне."
+    warn "Это может быть очень длительная и ресурсоемкая операция. Прогресс будет отображаться каждые 5 секунд."
 
-    msg "6. Запуск проверки Btrfs (scrub)..."
-    if ! sudo btrfs scrub status "$BTRFS_ROOT_MOUNTPOINT" | grep -q "scrub is running"; then
-        sudo btrfs scrub start "$BTRFS_ROOT_MOUNTPOINT"
-        ok "Btrfs scrub запущен в фоне."
+    # Запускаем balance с опцией --full-balance и -v (verbose) для получения большего вывода
+    # Мы используем 'nohup' и '&' чтобы btrfs balance работал в фоне и мы могли мониторить статус
+    sudo nohup btrfs balance start -v --full-balance "$BTRFS_ROOT_MOUNTPOINT" > /tmp/btrfs_balance.log 2>&1 &
+    BALANCE_PID=$! # Запоминаем PID процесса балансировки
+
+    ok "Балансировка Btrfs запущена. Ожидание запуска..."
+    sleep 2 # Даем пару секунд на старт
+
+    # Мониторинг прогресса балансировки
+    while sudo btrfs balance status "$BTRFS_ROOT_MOUNTPOINT" | grep -q "balance is running"; do
+        sudo btrfs balance status "$BTRFS_ROOT_MOUNTPOINT"
+        sleep 5 # Обновляем статус каждые 5 секунд
+    done
+
+    # Проверяем, успешно ли завершилась балансировка
+    # Используем `wait` для корректного получения статуса завершения фонового процесса
+    if wait $BALANCE_PID; then
+        ok "Балансировка Btrfs завершена."
     else
-        warn "Btrfs scrub уже запущен. Пропускаем."
+        err "Балансировка Btrfs завершилась с ошибкой. Проверьте лог /tmp/btrfs_balance.log"
     fi
+fi
+
+msg "6. Запуск проверки Btrfs (scrub)..."
+if ! sudo btrfs scrub status "$BTRFS_ROOT_MOUNTPOINT" | grep -q "scrub is running"; then
+    sudo btrfs scrub start "$BTRFS_ROOT_MOUNTPOINT"
+    ok "Btrfs scrub запущен в фоне. Проверьте статус позже командой 'sudo btrfs scrub status $BTRFS_ROOT_MOUNTPOINT'."
+else
+    warn "Btrfs scrub уже запущен. Пропускаем."
 fi
 
 # --- Этап 5: Очистка логов ---
