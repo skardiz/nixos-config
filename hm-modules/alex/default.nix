@@ -5,5 +5,6 @@
     ./firefox.nix
     ./plasma.nix
     ./bash.nix
+    ./packages.nix
   ];
 }
