@@ -10,7 +10,6 @@
 
   home.packages = with pkgs; [
     google-chrome
-    hiddify-app
     libreoffice
     obsidian
     telegram-desktop
