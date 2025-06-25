@@ -29,6 +29,7 @@
           ./modules/gaming.nix
           ./modules/services.nix
           ./modules/hearthstone.nix
+          ./modules/hiddify.nix
           home-manager.nixosModules.home-manager
         ];
       };
