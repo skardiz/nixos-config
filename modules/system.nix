@@ -71,6 +71,11 @@ in
   networking.hostName = "shershulya";
   networking.networkmanager.enable = true;
 
+  services.resolved.enable = true;
+  networking.useNetworkd = true;
+  systemd.network.enable = true;
+
+
   environment.systemPackages = with pkgs; [
     (writeShellScriptBin "rebuild" (builtins.readFile ../scripts/rebuild.sh))
     (writeShellScriptBin "cleaner" (builtins.readFile ../scripts/cleaner.sh))
