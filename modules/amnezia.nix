@@ -3,7 +3,6 @@
 
 {
   # 1. Загружаем модуль ядра AmneziaWG при старте системы.
-  # Это самый важный шаг для производительности и стабильности.
   boot.extraModulePackages = with config.boot.kernelPackages; [
     amneziawg
   ];
@@ -14,10 +13,10 @@
     amneziawg-tools   # Консольные утилиты, включая awg-quick
   ];
 
-  # 3. Декларативно создаем файл конфигурации для нашего VPN-подключения.
-  # NixOS поместит этот файл в /etc/amneziawg/awg0.conf
-  environment.etc."amneziawg/awg0.conf".text = ''
-    # --- ТВОЙ WARP-КОНФИГ НАЧИНАЕТСЯ ЗДЕСЬ ---
+  # --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ ---
+  # 3. Декларативно создаем файл конфигурации по ПРАВИЛЬНОМУ ПУТИ.
+  # NixOS поместит этот файл в /etc/amnezia/amneziawg/awg0.conf
+  environment.etc."amnezia/amneziawg/awg0.conf".text = ''
     [Interface]
     PrivateKey = 2Dlk4WaRdfZ++PKIL1DWg9Kzm1oy2SxzPR/Ae+Oo02U=
     S1 = 0
@@ -37,25 +36,20 @@
     PublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=
     AllowedIPs = 0.0.0.0/0, ::/0
     Endpoint = 188.114.99.224:1002
-    # --- ТВОЙ WARP-КОНФИГ ЗАКАНЧИВАЕТСЯ ЗДЕСЬ ---
   '';
   # Устанавливаем права доступа, чтобы только root мог читать конфиг с ключами
-  environment.etc."amneziawg/awg0.conf".mode = "0400";
+  environment.etc."amnezia/amneziawg/awg0.conf".mode = "0400";
 
 
   # 4. Создаем systemd-сервис для автоматического подключения.
-  # Он будет использовать `awg-quick` для управления соединением.
   systemd.services.amnezia-vpn = {
     description = "AmneziaWG auto-connect service";
-    # Запускать после того, как сеть будет доступна
     after = [ "network-online.target" ];
-    # Включаем сервис в стандартный запуск системы
     wantedBy = [ "multi-user.target" ];
 
-    # Указываем, какие команды выполнять для старта, остановки и перезагрузки
     serviceConfig = {
       Type = "oneshot";
-      RemainAfterExit = true; # Сервис считается активным после запуска
+      RemainAfterExit = true;
       ExecStart = "${pkgs.amneziawg-tools}/bin/awg-quick up awg0";
       ExecStop = "${pkgs.amneziawg-tools}/bin/awg-quick down awg0";
       ExecReload = "${pkgs.amneziawg-tools}/bin/awg-quick down awg0 && ${pkgs.amneziawg-tools}/bin/awg-quick up awg0";
