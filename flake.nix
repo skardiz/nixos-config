@@ -29,7 +29,7 @@
           ./modules/gaming.nix
           ./modules/services.nix
           ./modules/hearthstone.nix
-          ./modules/hiddify.nix
+          ./modules/amnezia.nix
           home-manager.nixosModules.home-manager
         ];
       };
