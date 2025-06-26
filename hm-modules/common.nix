@@ -13,6 +13,7 @@
     libreoffice
     obsidian
     telegram-desktop
+    tree
     zapzap
     zoom-us
   ];
