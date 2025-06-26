@@ -3,6 +3,8 @@
 
 {
   home.packages = with pkgs; [
-    # Здесь будут все персональные пакеты для alex
+    sops
+    gnupg
+    pinentry-curses
   ];
 }
