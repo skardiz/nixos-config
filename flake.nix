@@ -7,7 +7,7 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # --- НОВАЯ ЗАВИСИМОСТЬ ---0
+    # --- НОВАЯ ЗАВИСИМОСТЬ ---
     plasma-manager = {
       url = "github:nix-community/plasma-manager";
       inputs.nixpkgs.follows = "nixpkgs";
