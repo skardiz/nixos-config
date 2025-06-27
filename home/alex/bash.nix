@@ -1,16 +1,19 @@
-# hm-modules/alex/bash.nix
+# home/alex/bash.nix
 { pkgs, ... }:
 
 {
   programs.bash = {
     enable = true;
-    # Добавляем код, который будет выполняться при запуске bash.
-    # Здесь мы настраиваем переменную окружения PS1.
-    initExtra = ''
-      # Устанавливаем вид приглашения командной строки
-      # \[\033[01;34m\]\w\[\033[00m\] - текущая директория синим цветом
-      # \[\033[01;33m\]\t\[\033[00m\] - время в формате ЧЧ:ММ:СС желтым цветом
-      PS1='\[\033[01;34m\]\w\[\033[00m\] \[\033[01;33m\]\t\[\033[00m\] \$ '
-    '';
+    enableCompletion = true;
+    historyFile = ".config/bash/history";
+
+    shellAliases = {
+      # Псевдоним для публикации изменений на GitHub
+      publish = ''/home/alex/nixos-config/scripts/publish.sh'';
+
+      # Пример других полезных алиасов
+      ll = "ls -l";
+      ls = "ls --color=tty";
+    };
   };
 }

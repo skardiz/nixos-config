@@ -3,6 +3,7 @@
 
 {
   home.packages = with pkgs; [
+    bash
     sops
     gnupg
     pinentry-curses
