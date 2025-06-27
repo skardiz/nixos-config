@@ -9,11 +9,11 @@
 
     shellAliases = {
       # Псевдоним для публикации изменений на GitHub
-      publish = ''/home/alex/nixos-config/scripts/publish.sh'';
+      publish = "${pkgs.bash}/bin/bash /home/alex/nixos-config/scripts/publish.sh";
 
-      # Пример других полезных алиасов
       ll = "ls -l";
       ls = "ls --color=tty";
+      # и так далее...
     };
   };
 }
