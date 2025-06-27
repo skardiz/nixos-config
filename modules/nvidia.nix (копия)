@@ -40,5 +40,16 @@
 
   # Дополнительные системные пакеты (с исправленными именами)
   environment.systemPackages = with pkgs; [
+    libva-utils
+    vdpauinfo
+    vulkan-tools
+    vulkan-validation-layers
+    egl-wayland
+    wgpu-utils # wgpu-utils вместо wgpu
+    mesa
+    libglvnd
+    nvtopPackages.nvidia
+    nvitop
+    libGL # libGL - правильное имя
   ];
 }
