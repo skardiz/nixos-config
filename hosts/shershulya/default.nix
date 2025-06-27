@@ -3,45 +3,41 @@
 
 {
   imports = [
-    # 1. Конфигурация оборудования для этого конкретного компьютера
+    # Конфигурация оборудования для этого конкретного компьютера
     ./hardware-configuration.nix
 
-    # 2. Импортируем только ОБЩИЕ, переиспользуемые модули
+    # Общие модули
     ../../modules/system.nix
     ../../modules/gaming.nix
     ../../modules/desktop.nix
     ../../modules/services.nix
 
-    # 3. Импортируем модули, нужные ТОЛЬКО для этого хоста
-    ../../modules/nvidia.nix   # Так как здесь установлена карта NVIDIA
-    ../../modules/amnezia.nix  # VPN-клиент и его конфигурация
+    # Специфичные для этого хоста модули
+    ../../modules/nvidia.nix
+    ../../modules/amnezia.nix
   ];
 
-  # --- Специфичные для хоста "shershulya" настройки ---
-
-  # Имя хоста
+  # Специфичные для хоста настройки
   networking.hostName = "shershulya";
-
-  # Версия состояния системы (из старого system.nix)
   system.stateVersion = "25.11";
 
-  # Выбор ядра (из старого system.nix)
+  # Выбор ядра
   boot.kernelPackages = pkgs.linuxPackages_zen;
 
-  # Настройка /tmp в оперативной памяти (из старого system.nix)
+  # Настройка /tmp в оперативной памяти
   fileSystems."/tmp" = {
     device  = lib.mkForce "tmpfs";
     fsType  = lib.mkForce "tmpfs";
     options = [ "rw" "nosuid" "nodev" "noexec" "size=8G" "mode=1777" ];
   };
 
-  # Автологин для пользователя alex (из старого desktop.nix)
+  # Автологин для пользователя alex
   services.displayManager.autoLogin = {
     enable = true;
     user = "alex";
   };
 
-  # Специфичные настройки аудиоустройств (из старого services.nix)
+  # Специфичные настройки аудиоустройств
   environment.etc."wireplumber/main.lua.d/51-default-devices.lua".text = ''
     rule = {
       matches = { { "node.name", "equals", "alsa_output.pci-0000_00_1f.3.analog-stereo" } },
@@ -53,8 +49,7 @@
     }
   '';
 
-  # --- Определение пользователей и Home Manager для этого хоста ---
-  # (Все содержимое из старого users.nix перенесено сюда)
+  # Определение пользователей и Home Manager для этого хоста
   users.groups.nixos-config = {};
 
   users.users = {
@@ -66,8 +61,13 @@
     backupFileExtension = "bak";
     extraSpecialArgs = { inherit inputs; };
     users = {
-      alex = { imports = [ ../../hm-modules/common.nix ../../hm-modules/alex ]; };
-      mari = { imports = [ ../../hm-modules/common.nix ../../hm-modules/mari.nix ]; };
+      alex = { imports = [ ../../home/common.nix ../../home/alex ]; };
+      mari = { imports = [ ../../home/common.nix ../../home/mari.nix ]; };
     };
   };
+
+  # Интеграция системного скрипта cleaner
+  environment.systemPackages = with pkgs; [
+    (writeShellScriptBin "cleaner" (builtins.readFile ../../scripts/cleaner.sh))
+  ];
 }
