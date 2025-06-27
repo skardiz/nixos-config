@@ -55,11 +55,11 @@
       options = [ "subvol=cache" ];
     };
 
-  fileSystems."/tmp" =
-    { device = "/dev/disk/by-uuid/85de1e10-4038-408b-a4a3-b8da3cd8f18b";
-      fsType = "btrfs";
-      options = [ "subvol=tmp" ];
-    };
+#  fileSystems."/tmp" =
+#    { device = "/dev/disk/by-uuid/85de1e10-4038-408b-a4a3-b8da3cd8f18b";
+#      fsType = "btrfs";
+#      options = [ "subvol=tmp" ];
+#    };
 
   fileSystems."/games" =
     { device = "/dev/disk/by-uuid/85de1e10-4038-408b-a4a3-b8da3cd8f18b";

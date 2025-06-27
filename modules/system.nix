@@ -3,12 +3,9 @@
 
 let
   # --- Блок для создания простой и чистой метки ---
-
-  # 1. Получаем дату и время последнего коммита.
   dateString = self.lastModifiedDate or "19700101000000";
   dateParts = builtins.match "(.{4})(.{2})(.{2})(.{2})(.{2}).*" dateString;
 
-  # 2. Форматируем строку в "ЧЧ:ММ-ДД.ММ", используя только разрешенные символы.
   nixosLabel =
     if dateParts != null
     then
@@ -21,6 +18,7 @@ let
     else "unknown-datetime"; # Запасной вариант
 
 in
+
 {
   # -------------------------------------------------------------------
   # Настройки Nix
@@ -42,10 +40,8 @@ in
   };
 
   # -------------------------------------------------------------------
-  # Настройки оборудования и загрузки
+  # Настройки загрузчика
   # -------------------------------------------------------------------
-  boot.kernelPackages = pkgs.linuxPackages_zen;
-
   boot.loader = {
     systemd-boot.enable = true;
     efi.canTouchEfiVariables = true;
@@ -56,25 +52,18 @@ in
   # Основные системные настройки
   # -------------------------------------------------------------------
   nixpkgs.config.allowUnfree = true;
-  system.stateVersion = "25.11";
-
-  # Устанавливаем нашу простую и чистую метку.
-  system.nixos.label = nixosLabel;
-
+  system.nixos.label = nixosLabel; # Устанавливаем нашу простую и чистую метку.
   time.timeZone = "Europe/Moscow";
   i18n.defaultLocale = "ru_RU.UTF-8";
   console.keyMap = "ru";
 
   # -------------------------------------------------------------------
-  # Сеть и системные пакеты
+  # Сеть и общие системные пакеты
   # -------------------------------------------------------------------
-  networking.hostName = "shershulya";
   networking.networkmanager.enable = true;
-
   services.resolved.enable = true;
   networking.useNetworkd = true;
   systemd.network.enable = true;
-
 
   environment.systemPackages = with pkgs; [
     (writeShellScriptBin "rebuild" (builtins.readFile ../scripts/rebuild.sh))
