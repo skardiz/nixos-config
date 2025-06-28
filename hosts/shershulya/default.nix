@@ -1,5 +1,5 @@
 # hosts/shershulya/default.nix
-{ config, pkgs, inputs, lib, ... }:
+{ config, pkgs, inputs, lib, ... }: # Убрали 'self' из аргументов
 
 {
   imports = [
@@ -7,16 +7,13 @@
     ./hardware-configuration.nix
 
     # --- Core Modules ---
-    # Базовые настройки системы
     ../../modules/core/system.nix
     ../../modules/core/services.nix
 
     # --- Hardware Modules ---
-    # Модули, специфичные для оборудования этого хоста
     ../../modules/hardware/nvidia-pascal.nix
 
     # --- Profile Modules ---
-    # Профили, описывающие сценарии использования этого хоста
     ../../modules/profiles/desktop.nix
     ../../modules/profiles/gaming.nix
     ../../modules/profiles/vpn.nix
@@ -54,9 +51,10 @@
     }
   '';
 
-  # Определение пользователей и Home Manager для этого хоста
+  # --- Определение пользователей и Home Manager для этого хоста ---
   users.groups.nixos-config = {};
 
+  # --- Возвращаем ручное определение пользователей ---
   users.users = {
     alex = { isNormalUser = true; extraGroups = [ "wheel" "gamemode" "nixos-config" ]; };
     mari = { isNormalUser = true; extraGroups = [ "wheel" "gamemode" ]; };
@@ -71,13 +69,8 @@
     };
   };
 
-  # --- Интеграция скриптов и ДИАГНОСТИЧЕСКАЯ УСТАНОВКА ПАКЕТА ---
+  # Интеграция системного скрипта cleaner
   environment.systemPackages = with pkgs; [
-    # Наш системный скрипт для очистки
     (writeShellScriptBin "cleaner" (builtins.readFile ../../scripts/cleaner.sh))
-
-    # --- ДИАГНОСТИКА ---
-    # Попробуем установить наш кастомный пакет на системном уровне
-    thorium-browser
   ];
 }
