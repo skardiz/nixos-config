@@ -1,0 +1,11 @@
+waydroid show-full-ui
+sudo waydroid shell
+cd nixos-config
+tree
+publish 
+sudo nixos-rebuild switch --flake .#shershulya
+sudo waydroid init
+sudo waydroid init -s GAPPS -f
+sudo nano /var/lib/waydroid/waydroid_base.prop
+sudo systemctl start waydroid-container
+waydroid session start
