@@ -13,13 +13,13 @@
 
     # --- Hardware Modules ---
     # Модули, специфичные для оборудования этого хоста
-    ../../modules/hardware/nvidia-pascal.nix # <-- Изменено
+    ../../modules/hardware/nvidia-pascal.nix
 
     # --- Profile Modules ---
     # Профили, описывающие сценарии использования этого хоста
     ../../modules/profiles/desktop.nix
     ../../modules/profiles/gaming.nix
-    ../../modules/profiles/vpn.nix # <-- Изменено
+    ../../modules/profiles/vpn.nix
   ];
 
   # Специфичные для хоста настройки
@@ -71,9 +71,13 @@
     };
   };
 
-  # Интеграция системного скрипта cleaner
+  # --- Интеграция скриптов и ДИАГНОСТИЧЕСКАЯ УСТАНОВКА ПАКЕТА ---
   environment.systemPackages = with pkgs; [
+    # Наш системный скрипт для очистки
     (writeShellScriptBin "cleaner" (builtins.readFile ../../scripts/cleaner.sh))
+
+    # --- ДИАГНОСТИКА ---
+    # Попробуем установить наш кастомный пакет на системном уровне
     thorium-browser
   ];
 }
