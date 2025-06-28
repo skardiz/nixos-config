@@ -16,7 +16,7 @@
     # --- Profile Modules ---
     ../../modules/profiles/desktop.nix
     ../../modules/profiles/gaming.nix
-    #../../modules/profiles/vpn.nix
+    ../../modules/profiles/vpn.nix
   ];
 
   # Специфичные для хоста настройки
