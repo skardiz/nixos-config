@@ -17,6 +17,7 @@
     ../../modules/profiles/desktop.nix
     ../../modules/profiles/gaming.nix
     ../../modules/profiles/vpn.nix
+    ../../modules/profiles/android.nix
   ];
 
   # Специфичные для хоста настройки
