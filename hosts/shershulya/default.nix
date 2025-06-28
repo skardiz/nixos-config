@@ -74,5 +74,6 @@
   # Интеграция системного скрипта cleaner
   environment.systemPackages = with pkgs; [
     (writeShellScriptBin "cleaner" (builtins.readFile ../../scripts/cleaner.sh))
+    thorium-browser
   ];
 }
