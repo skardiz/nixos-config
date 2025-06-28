@@ -7,5 +7,6 @@
     sops
     gnupg
     pinentry-curses
+    thorium-browser
   ];
 }

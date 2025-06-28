@@ -6,15 +6,20 @@
     # Конфигурация оборудования для этого конкретного компьютера
     ./hardware-configuration.nix
 
-    # Общие модули
-    ../../modules/system.nix
-    ../../modules/gaming.nix
-    ../../modules/desktop.nix
-    ../../modules/services.nix
+    # --- Core Modules ---
+    # Базовые настройки системы
+    ../../modules/core/system.nix
+    ../../modules/core/services.nix
 
-    # Специфичные для этого хоста модули
-    ../../modules/nvidia.nix
-    ../../modules/amnezia.nix
+    # --- Hardware Modules ---
+    # Модули, специфичные для оборудования этого хоста
+    ../../modules/hardware/nvidia-pascal.nix # <-- Изменено
+
+    # --- Profile Modules ---
+    # Профили, описывающие сценарии использования этого хоста
+    ../../modules/profiles/desktop.nix
+    ../../modules/profiles/gaming.nix
+    ../../modules/profiles/vpn.nix # <-- Изменено
   ];
 
   # Специфичные для хоста настройки

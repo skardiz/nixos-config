@@ -1,6 +1,6 @@
 # flake.nix
 {
-  description = "Моя финальная, чистая система на стандартном ядре";
+  description = "Моя декларативная конфигурация NixOS";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -14,23 +14,30 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, plasma-manager, ... }@inputs: {
+  outputs = { self, nixpkgs, ... }@inputs: {
+    # --- Экспортируем наши оверлеи ---
+    # Мы определяем наш default.nix из папки overlays как стандартный оверлей этого флейка.
+    # Это позволяет другим флейкам (если они будут) использовать наши оверлеи.
+    overlays.default = import ./overlays;
+
+    # --- Конфигурации системы ---
     nixosConfigurations = {
-      # --- Конфигурация для хоста shershulya ---
       shershulya = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         specialArgs = { inherit inputs self; };
         modules = [
-          # Главная точка входа для хоста. Nix автоматически найдет default.nix
+          # --- Применяем оверлеи к системе ---
+          # Эта строка говорит nixpkgs использовать наш оверлей.
+          # Все, что мы определили в `overlays/default.nix`, теперь будет доступно в `pkgs`.
+          { nixpkgs.overlays = [ self.overlays.default ]; }
+
+          # Указываем на главную точку входа для хоста.
           ./hosts/shershulya
 
-          # Подключаем модуль Home Manager. Это включает интеграцию с NixOS.
-          home-manager.nixosModules.home-manager
+          # Подключаем модуль Home Manager.
+          inputs.home-manager.nixosModules.home-manager
         ];
       };
-
-      # Если в будущем появится другой хост, вы просто добавите его сюда:
-      # another-host = nixpkgs.lib.nixosSystem { ... };
     };
   };
 }
