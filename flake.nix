@@ -15,24 +15,22 @@
   };
 
   outputs = { self, nixpkgs, ... }@inputs: {
-    # --- Экспортируем наши оверлеи (это было сделано ранее и это правильно) ---
+    # Экспортируем наши оверлеи
     overlays.default = import ./overlays;
 
-    # --- Конфигурации системы ---
+    # Конфигурации системы
     nixosConfigurations = {
       shershulya = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         specialArgs = { inherit inputs self; };
         modules = [
-          # --- ВАЖНО: Применяем оверлеи к системе ---
-          # Эта строка говорит nixpkgs использовать наш оверлей.
-          # Теперь `pkgs` для всей системы будет содержать наши кастомные пакеты.
+          # Применяем оверлеи к системе
           { nixpkgs.overlays = [ self.overlays.default ]; }
 
-          # Указываем на главную точку входа для хоста.
+          # Указываем на главную точку входа для хоста
           ./hosts/shershulya
 
-          # Подключаем модуль Home Manager.
+          # Подключаем модуль Home Manager
           inputs.home-manager.nixosModules.home-manager
         ];
       };
