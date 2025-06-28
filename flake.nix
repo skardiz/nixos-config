@@ -18,7 +18,7 @@
     # Экспортируем наши оверлеи
     overlays.default = import ./overlays;
 
-    # Конфигурации системы
+    # Конфигурации системы----------------------------------
     nixosConfigurations = {
       shershulya = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
