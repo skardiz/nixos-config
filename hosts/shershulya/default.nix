@@ -59,7 +59,7 @@
     extraSpecialArgs = { inherit inputs; };
     users = {
       alex = { imports = [ ../../home/common.nix ../../home/alex ]; };
-      mari = { imports = [ ../../home/common.nix ../../home/mari.nix ]; };
+      mari = { imports = [ ../../home/common.nix ../../home/mari ]; };
     };
   };
 

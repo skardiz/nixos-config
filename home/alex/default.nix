@@ -1,13 +1,14 @@
-# /home/alex/nixos-config/hm-modules/alex/default.nix
+# home/alex/default.nix
 { pkgs, config, ... }:
-
 {
   imports = [
-    ./git.nix
+    ../_common # Импортируем ВСЕ общие настройки
+
+    # Персональные модули Алекса
     ./firefox.nix
+    ./git.nix
     ./plasma.nix
-    ./bash.nix
     ./packages.nix
+    ./bash.nix
   ];
-  # Убедись, что здесь нет ничего про hiddify-cli или systemd.user.services
 }
