@@ -26,13 +26,6 @@
   # Выбор ядра
   boot.kernelPackages = pkgs.linuxPackages_zen;
 
-  # Настройка /tmp в оперативной памяти
-  fileSystems."/tmp" = {
-    device  = lib.mkForce "tmpfs";
-    fsType  = lib.mkForce "tmpfs";
-    options = [ "rw" "nosuid" "nodev" "noexec" "size=8G" "mode=1777" ];
-  };
-
   # Автологин для пользователя alex
   services.displayManager.autoLogin = {
     enable = true;
