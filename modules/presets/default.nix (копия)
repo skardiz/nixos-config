@@ -1,0 +1,33 @@
+# modules/presets/default.nix
+# Главный сборщик, который управляет нашей ЕДИНОЙ системой пресетов.
+{ config, lib, pkgs, ... }:
+
+let
+  # Собираем все доступные пресеты в одну большую библиотеку.
+  # Пока здесь только простые пресеты, поэтому все безопасно.
+  availablePresets =
+    (import ./locale.nix { }) //
+    (import ./policy.nix { }) //
+    (import ./performance.nix { inherit pkgs; }) //
+    (import ./desktop.nix { inherit pkgs lib; }) //
+    (import ./gaming.nix { inherit pkgs lib; });
+
+in
+{
+  # --- Объявляем одну, простую опцию ---
+  options.my.presets = lib.mkOption {
+    # Тип: список строк, которые должны быть именами из нашей библиотеки
+    type = lib.types.listOf (lib.types.enum (lib.attrNames availablePresets));
+    default = [];
+    description = "Простой список пресетов для применения к этому хосту.";
+  };
+
+  # --- Простой и надежный механизм применения ---
+  # Так как мы пока не используем сложные пресеты, зависящие от 'config',
+  # этот прямой подход абсолютно безопасен и не вызовет рекурсию.
+  config = lib.mkMerge (
+    map
+      (presetName: availablePresets."${presetName}")
+      config.my.presets
+  );
+}
