@@ -1,7 +1,7 @@
 # modules/users.nix
 #
 # Наш собственный, высокоуровневый модуль для управления пользователями.
-{ lib, config, ... }:
+{ lib, config, self, ... }:
 
 let
   cfg = config.my.users;
@@ -11,13 +11,13 @@ in
   options.my.users.accounts = lib.mkOption {
     type = with lib.types; attrsOf (submodule {
       options = {
-        isMainUser = mkEnableOption "Этот пользователь является основным (для автологина)";
-        description = mkOption {
+        isMainUser = lib.mkEnableOption "Этот пользователь является основным (для автологина)";
+        description = lib.mkOption {
           type = str;
           default = "";
           description = "Полное имя пользователя.";
         };
-        extraGroups = mkOption {
+        extraGroups = lib.mkOption {
           type = listOf str;
           default = [];
           description = "Дополнительные группы для пользователя.";
@@ -41,15 +41,17 @@ in
 
     # 2. Генерируем блок home-manager.users
     home-manager.users = lib.mapAttrs
-      (name: _: import ../../home/${name})
+      (name: _:
+        # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
+        # Мы строим "чистый" путь от корня проекта, используя 'self'.
+        import "${self}/home/${name}"
+      )
       cfg.accounts;
 
     # 3. Генерируем блок автологина для основного пользователя
     services.displayManager.autoLogin =
       let
-        # Находим всех пользователей, помеченных как isMainUser
         mainUsers = lib.filterAttrs (name: userCfg: userCfg.isMainUser) cfg.accounts;
-        # Получаем имя первого (и единственного) такого пользователя
         mainUserName = lib.head (lib.attrNames mainUsers);
       in
       lib.mkIf (mainUsers != {}) {

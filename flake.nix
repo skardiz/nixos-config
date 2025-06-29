@@ -14,24 +14,21 @@
     };
   };
 
-  outputs = { self, nixpkgs, ... }@inputs: {
-    # Экспортируем наши оверлеи0
-    overlays.default = import ./overlays;
-
-    # Конфигурации системы----------------------------------
+  outputs = { self, nixpkgs, home-manager, ... }@inputs: {
     nixosConfigurations = {
       shershulya = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
-        specialArgs = { inherit inputs self; };
-        modules = [
-          # Применяем оверлеи к системе
-          { nixpkgs.overlays = [ self.overlays.default ]; }
 
-          # Указываем на главную точку входа для хоста
+        # Мы передаем 'self' (GPS-трекер на корень проекта)
+        # и 'inputs' во все системные модули.
+        specialArgs = { inherit inputs self; };
+
+        modules = [
+          # Подключаем наш хост
           ./hosts/shershulya
 
-          # Подключаем модуль Home Manager
-          inputs.home-manager.nixosModules.home-manager
+          # Подключаем Home Manager на уровне системы
+          home-manager.nixosModules.home-manager
         ];
       };
     };
