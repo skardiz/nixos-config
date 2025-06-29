@@ -1,5 +1,7 @@
 # modules/options.nix
-# Определяем кастомные опции для простых, повторяющихся настроек.
+#
+# Наш центральный "Пульт Управления".
+# Здесь мы объявляем все кастомные опции и связываем их с реальными настройками NixOS.
 { lib, config, pkgs, ... }:
 {
   options.my = {
@@ -19,7 +21,7 @@
   };
 
   config = {
-    # Реализация опций с помощью lib.mkIf. Это безопасный способ.
+    # Эта секция связывает наши красивые переключатели с настоящими опциями NixOS
     time.timeZone = lib.mkIf config.my.locale.enableRussian "Europe/Moscow";
     i18n.defaultLocale = lib.mkIf config.my.locale.enableRussian "ru_RU.UTF-8";
     console.keyMap = lib.mkIf config.my.locale.enableRussian "ru";
