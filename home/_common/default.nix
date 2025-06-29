@@ -9,7 +9,8 @@
   ];
 
   # --- Базовые настройки Home Manager ---
-  # УДАЛЕНО: nixpkgs.config.allowUnfree = true;
+  # Это разрешение для ПОЛЬЗОВАТЕЛЯ (для Chrome, Zoom и т.д.)
+  nixpkgs.config.allowUnfree = true;
   home.stateVersion = "25.11"; # Важно для стабильности
 
   # --- Пакеты, которые будут установлены для всех пользователей ---
