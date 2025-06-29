@@ -16,7 +16,6 @@ in
     # Наша библиотека "фич"
     ../../modules/features/desktop.nix
     ../../modules/features/gaming.nix
-    ../../modules/features/vpn.nix
     ../../modules/features/android.nix
   ];
 
