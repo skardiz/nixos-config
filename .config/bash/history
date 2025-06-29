@@ -9,3 +9,13 @@ sudo waydroid init -s GAPPS -f
 sudo nano /var/lib/waydroid/waydroid_base.prop
 sudo systemctl start waydroid-container
 waydroid session start
+sudo systemctl enable waydroid-container.service
+sudo systemctl disable waydroid-container.service
+sudo nixos-rebuild switch --flake .#shershulya
+cd nixos-config
+sudo nixos-rebuild switch --flake .#shershulya
+sudo nixos-rebuild switch --flake .#shershulya
+sudo nixos-rebuild switch --flake .#shershulya
+publish 
+sudo nixos-rebuild switch --flake .#shershulya
+reboot 
