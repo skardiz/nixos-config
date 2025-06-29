@@ -3,7 +3,6 @@
 { ... }:
 {
   imports = [
-    ./bash.nix
     ./git.nix
     ./waydroid-idle.nix
   ];

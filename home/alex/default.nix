@@ -9,6 +9,5 @@
     ./git.nix
     ./plasma.nix
     ./packages.nix
-    ./bash.nix
   ];
 }
