@@ -1,5 +1,6 @@
 # hosts/shershulya/default.nix
-{ config, pkgs, inputs, lib, ... }:
+# Этот файл теперь - чистейший декларативный манифест.
+{ config, pkgs, lib, ... }:
 
 {
   imports = [
@@ -27,6 +28,7 @@
     };
   };
 
-  # Передача 'inputs' в модули Home Manager
-  home-manager.extraSpecialArgs = { inherit inputs; };
+  # Эта строка больше не нужна, так как 'inputs' передаются
+  # глобально через specialArgs в flake.nix
+  # home-manager.extraSpecialArgs = { inherit inputs; };
 }
