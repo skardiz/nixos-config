@@ -58,8 +58,8 @@
     backupFileExtension = "bak";
     extraSpecialArgs = { inherit inputs; };
     users = {
-      alex = { imports = [ ../../home/common.nix ../../home/alex ]; };
-      mari = { imports = [ ../../home/common.nix ../../home/mari ]; };
+      alex = import ../../home/alex;
+      mari = import ../../home/mari;
     };
   };
 

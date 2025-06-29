@@ -1,21 +1,25 @@
 # home/_common/git.nix
-{ config, ... }:
+{ config, pkgs, ... }:
 
 let
   # Создаем "карту" с персональными данными для каждого пользователя.
-  # Это позволяет хранить все личные данные в одном месте.
   userSpecificSettings = {
     alex = {
       userName = "Alex";
       userEmail = "skardizone@gmail.com";
     };
-    # Сюда легко добавить нового пользователя в будущем
-    # guest = { ... };
   };
 
-  # Получаем настройки для ТЕКУЩЕГО пользователя, для которого собирается конфиг.
-  # Если пользователя нет в нашей карте, будет использован пустой набор {}.
-  currentUserSettings = userSpecificSettings.${config.home.username} or {};
+  # ------------------------------------------------------------------
+  # ИЗМЕНЕНИЕ ЗДЕСЬ: Добавляем 'or { ... }' для обработки неизвестных пользователей
+  # ------------------------------------------------------------------
+  # Получаем настройки для ТЕКУЩЕГО пользователя.
+  # Если пользователя нет в нашей карте (например, root),
+  # будет использован набор атрибутов по умолчанию.
+  currentUserSettings = userSpecificSettings.${config.home.username} or {
+    userName = "NixOS User";
+    userEmail = "user@localhost";
+  };
 
 in
 {
@@ -23,7 +27,8 @@ in
   programs.git.enable = true;
   services.ssh-agent.enable = true;
 
-  # Применяем персональные настройки
+  # Применяем персональные или дефолтные настройки
+  # Теперь эти строки всегда будут работать, так как currentUserSettings никогда не будет пустым.
   programs.git.userName = currentUserSettings.userName;
   programs.git.userEmail = currentUserSettings.userEmail;
 }
