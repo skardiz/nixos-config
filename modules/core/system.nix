@@ -5,6 +5,11 @@
 {
   # --- Настройки Nix ---
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
+  # Разрешаем установку несвободных пакетов на уровне ВСЕЙ СИСТЕМЫ.
+  # Это необходимо для таких вещей, как драйверы NVIDIA.
+  nixpkgs.config.allowUnfree = true;
+
   nix.gc = {
     automatic = true;
     dates = "weekly";
