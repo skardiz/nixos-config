@@ -71,7 +71,26 @@ in
     }
   '';
 
-  # --- Управление пользователями через Home Manager ---
+  # ------------------------------------------------------------------
+  # "Паспортный стол": Определяем всех системных пользователей
+  # Этот блок должен быть на верхнем уровне, отдельно от home-manager.
+  # ------------------------------------------------------------------
+  users.users = {
+    alex = {
+      isNormalUser = true;
+      description = "Alex";
+      extraGroups = [ "wheel" "networkmanager" "video" ];
+    };
+    mari = {
+      isNormalUser = true;
+      description = "Mari";
+      extraGroups = [ "wheel" "networkmanager" "video" ];
+    };
+  };
+
+  # ------------------------------------------------------------------
+  # "Министерство ЖКХ": Настраиваем Home Manager для СУЩЕСТВУЮЩИХ пользователей
+  # ------------------------------------------------------------------
   home-manager = {
     backupFileExtension = "bak";
     extraSpecialArgs = { inherit inputs; };
