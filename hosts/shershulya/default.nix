@@ -1,95 +1,64 @@
 # hosts/shershulya/default.nix
-
 { config, pkgs, inputs, lib, ... }:
-
-# --- Локальные переменные для этого модуля ---
 let
-  publish-script = pkgs.writeShellScriptBin "publish" (
-    builtins.readFile ../../scripts/publish.sh
-  );
-  cleaner-script = pkgs.writeShellScriptBin "cleaner" (
-    builtins.readFile ../../scripts/cleaner.sh
-  );
+  publish-script = pkgs.writeShellScriptBin "publish" (builtins.readFile ../../scripts/publish.sh);
+  cleaner-script = pkgs.writeShellScriptBin "cleaner" (builtins.readFile ../../scripts/cleaner.sh);
 in
-
-# --- Основная конфигурация хоста ---
 {
   imports = [
+    # --- Подключаем наши модульные компоненты ---
     ./hardware-configuration.nix
-    ../../modules/core/system.nix
-    ../../modules/core/services.nix
     ../../modules/hardware/nvidia-pascal.nix
-    ../../modules/profiles/desktop.nix
-    ../../modules/profiles/gaming.nix
-    ../../modules/profiles/vpn.nix
-    ../../modules/profiles/android.nix
+
+    # Наш новый "Пульт Управления"
+    ../../modules/options.nix
+
+    # Наша библиотека "фич"
+    ../../modules/features/desktop.nix
+    ../../modules/features/gaming.nix
+    ../../modules/features/vpn.nix
+    ../../modules/features/android.nix
   ];
 
-  # --- Сетевые настройки ---
-  networking.hostName = "shershulya";
+  # ------------------------------------------------------------------
+  # "ПУЛЬТ УПРАВЛЕНИЯ" ДЛЯ ЭТОГО ХОСТА
+  # ------------------------------------------------------------------
+  my = {
+    locale.enableRussian = true;
+    optimizations = {
+      enableSsdTweaks = true;
+      enableZlibNg = true;
+      enableDesktopResponsiveness = true;
+    };
+    policies = {
+      allowUnfree = true;
+      enableAutoGc = true;
+      enableFlakes = true;
+    };
+  };
 
-  # --- Системные службы ---
-  # Включаем системную службу управления DNS.
-  # Это необходимо для корректной работы NetworkManager и многих VPN-клиентов.
+  # ------------------------------------------------------------------
+  # НАСТРОЙКИ, УНИКАЛЬНЫЕ ДЛЯ ЭТОГО ХОСТА
+  # ------------------------------------------------------------------
+  networking.hostName = "shershulya";
+  system.stateVersion = "25.11";
+
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;
+  boot.kernelPackages = pkgs.linuxPackages_zen;
   services.resolved.enable = true;
 
-  # --- Версия системы и ядро ---
-  system.stateVersion = "25.11";
-  boot.kernelPackages = pkgs.linuxPackages_zen;
+  users.users = {
+    alex = { isNormalUser = true; description = "Alex"; extraGroups = [ "wheel" "networkmanager" "video" "adbusers" ]; };
+    mari = { isNormalUser = true; description = "Mari"; extraGroups = [ "wheel" "networkmanager" "video" ]; };
+  };
 
-  # --- Безопасность и права доступа ---
-  security.sudo.extraRules = [{
-    users = [ "alex" "mari" ];
-    commands = [{
-      command = "${pkgs.systemd}/bin/systemctl stop waydroid-container.service";
-      options = [ "NOPASSWD" ];
-    }];
-  }];
+  home-manager.users = {
+    alex = import ../../home/alex;
+    mari = import ../../home/mari;
+  };
 
-  # --- Настройки дисплейного менеджера ---
+  environment.systemPackages = [ publish-script cleaner-script ];
   services.displayManager.autoLogin.enable = true;
   services.displayManager.autoLogin.user = "alex";
-
-  # --- Системные пакеты и скрипты ---
-  environment.systemPackages = [
-    publish-script
-    cleaner-script
-  ];
-
-  # --- Специфичные для оборудования настройки ---
-  environment.etc."wireplumber/main.lua.d/51-default-devices.lua".text = ''
-    rule = {
-      matches = { { "node.name", "equals", "alsa_output.pci-0000_00_1f.3.analog-stereo" } },
-      apply_properties = { ["node.priority"] = 2001 }
-    }
-    rule = {
-      matches = { { "node.name", "equals", "alsa_input.usb-Razer_Inc._Razer_Seiren_Pro_UC1712132400427-00.analog-stereo" } },
-      apply_properties = { ["node.priority"] = 2001 }
-    }
-  '';
-
-  # --- "Паспортный стол": Определяем всех системных пользователей ---
-  users.users = {
-    alex = {
-      isNormalUser = true;
-      description = "Alex";
-      # Добавляем группу 'adbusers', необходимую для WayDroid
-      extraGroups = [ "wheel" "networkmanager" "video" "adbusers" ];
-    };
-    mari = {
-      isNormalUser = true;
-      description = "Mari";
-      extraGroups = [ "wheel" "networkmanager" "video" ];
-    };
-  };
-
-  # --- "Министерство ЖКХ": Настраиваем Home Manager ---
-  home-manager = {
-    backupFileExtension = "bak";
-    extraSpecialArgs = { inherit inputs; };
-    users = {
-      alex = import ../../home/alex;
-      mari = import ../../home/mari;
-    };
-  };
 }
