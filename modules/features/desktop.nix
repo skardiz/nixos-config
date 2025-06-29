@@ -8,7 +8,6 @@
   services.xserver.xkb = { layout = "us,ru"; options = "grp:alt_shift_toggle"; };
   services.displayManager.sddm.enable = true;
   services.desktopManager.plasma6.enable = true;
-  sound.enable = true;
   services.pipewire = {
     enable = true;
     alsa.enable = true;
