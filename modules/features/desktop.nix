@@ -15,7 +15,6 @@
 
   # Сеть и звук
   networking.networkmanager.enable = true;
-  sound.enable = true;
   services.pipewire = {
     enable = true;
     alsa.enable = true;
@@ -23,6 +22,4 @@
     pulse.enable = true;
   };
 
-  # Шрифты
-  fonts.packages = with pkgs; [ noto-fonts noto-fonts-cjk noto-fonts-emoji ];
 }
