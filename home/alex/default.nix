@@ -6,7 +6,6 @@
 
     # Персональные модули Алекса
     ./firefox.nix
-    ./git.nix
     ./plasma.nix
     ./packages.nix
   ];
