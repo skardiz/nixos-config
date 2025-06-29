@@ -1,39 +1,65 @@
 # hosts/shershulya/default.nix
-{ config, pkgs, inputs, lib, ... }: # Убрали 'self' из аргументов
+{ config, pkgs, inputs, lib, ... }:
 
+# --- Локальные переменные для этого модуля ---
+# Сначала определяем наши кастомные скрипты как пакеты.
+let
+  publish-script = pkgs.writeShellScriptBin "publish" (
+    builtins.readFile ../../scripts/publish.sh
+  );
+  cleaner-script = pkgs.writeShellScriptBin "cleaner" (
+    builtins.readFile ../../scripts/cleaner.sh
+  );
+in
+# --- Основная конфигурация хоста ---
 {
   imports = [
-    # Конфигурация оборудования для этого конкретного компьютера
     ./hardware-configuration.nix
-
-    # --- Core Modules ---
     ../../modules/core/system.nix
     ../../modules/core/services.nix
-
-    # --- Hardware Modules ---
     ../../modules/hardware/nvidia-pascal.nix
-
-    # --- Profile Modules ---
     ../../modules/profiles/desktop.nix
     ../../modules/profiles/gaming.nix
     ../../modules/profiles/vpn.nix
     ../../modules/profiles/android.nix
   ];
 
-  # Специфичные для хоста настройки
+  # --- Сетевые настройки ---
   networking.hostName = "shershulya";
-  system.stateVersion = "25.11";
 
-  # Выбор ядра
+  # --- Версия системы и ядро ---
+  system.stateVersion = "25.11";
   boot.kernelPackages = pkgs.linuxPackages_zen;
 
-  # Автологин для пользователя alex
-  services.displayManager.autoLogin = {
-    enable = true;
-    user = "alex";
-  };
+  # --- Безопасность и права доступа ---
+  # Разрешаем пользователям alex и mari останавливать сервис WayDroid без пароля
+  security.sudo.extraRules = [
+    {
+      users = [ "alex" "mari" ];
+      commands = [
+        {
+          command = "${pkgs.systemd}/bin/systemctl stop waydroid-container.service";
+          options = [ "NOPASSWD" ];
+        }
+      ];
+    }
+  ];
 
-  # Специфичные настройки аудиоустройств
+  # --- Настройки дисплейного менеджера ---
+  # Включаем автоматический вход для пользователя 'alex'
+  services.displayManager.autoLogin.enable = true;
+  services.displayManager.autoLogin.user = "alex";
+
+  # --- Системные пакеты и скрипты ---
+  # Добавляем созданные нами пакеты-скрипты в системные пакеты.
+  # Теперь они будут доступны в PATH для всех пользователей.
+  environment.systemPackages = [
+    publish-script
+    cleaner-script
+  ];
+
+  # --- Специфичные для оборудования настройки ---
+  # Настройки аудиоустройств для PipeWire
   environment.etc."wireplumber/main.lua.d/51-default-devices.lua".text = ''
     rule = {
       matches = { { "node.name", "equals", "alsa_output.pci-0000_00_1f.3.analog-stereo" } },
@@ -45,15 +71,7 @@
     }
   '';
 
-  # --- Определение пользователей и Home Manager для этого хоста ---
-  users.groups.nixos-config = {};
-
-  # --- Возвращаем ручное определение пользователей ---
-  users.users = {
-    alex = { isNormalUser = true; extraGroups = [ "wheel" "gamemode" "nixos-config" ]; };
-    mari = { isNormalUser = true; extraGroups = [ "wheel" "gamemode" ]; };
-  };
-
+  # --- Управление пользователями через Home Manager ---
   home-manager = {
     backupFileExtension = "bak";
     extraSpecialArgs = { inherit inputs; };
@@ -62,9 +80,4 @@
       mari = import ../../home/mari;
     };
   };
-
-  # Интеграция системного скрипта cleaner
-  environment.systemPackages = with pkgs; [
-    (writeShellScriptBin "cleaner" (builtins.readFile ../../scripts/cleaner.sh))
-  ];
 }
