@@ -1,71 +1,56 @@
 # modules/core/system.nix
-{ pkgs, lib, config, ... }:
+# Этот файл содержит самые базовые, фундаментальные настройки системы.
+{ config, pkgs, ... }:
 
 {
-  # -------------------------------------------------------------------
-  # Настройки Nix
-  # -------------------------------------------------------------------
-  nix = {
-    settings = {
-      experimental-features = [ "nix-command" "flakes" ];
-      auto-optimise-store = true;
-    };
-    gc = {
-      automatic = true;
-      dates = "weekly";
-      options = "--delete-older-than 7d";
-    };
-    optimise.automatic = true;
+  # --- Настройки Nix ---
+  # Включаем экспериментальные возможности, необходимые для Flakes
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
+  # Настраиваем автоматическую очистку мусора для экономии места на диске
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 7d";
   };
 
-  # -------------------------------------------------------------------
-  # Настройки загрузчика
-  # -------------------------------------------------------------------
-  boot.loader = {
-    systemd-boot.enable = true;
-    efi.canTouchEfiVariables = true;
-    timeout = 0;
-  };
+  # Включаем автоматическую оптимизацию хранилища Nix
+  nix.optimise.automatic = true;
 
-  # -------------------------------------------------------------------
-  # Твики производительности (БЕЗ ФАЙЛОВОЙ СИСТЕМЫ)
-  # -------------------------------------------------------------------
-  services.fstrim.enable = true; # Это безопасная и полезная опция для SSD
-  boot.kernelParams = [ "scsi_mod.use_blk_mq=1" "elevator=kyber" ];
+  # --- Загрузчик ---
+  # Используем systemd-boot, стандартный для систем с UEFI
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;
 
-  # --- Секция BTRFS полностью удалена ---
+  # --- Оптимизация производительности ---
+  # Заменяем стандартную библиотеку zlib на её высокопроизводительную
+  # версию zlib-ng. Это ускоряет многие системные операции.
+  boot.zlib.implementation = "zlib-ng";
 
-  # Параметры ядра для максимальной производительности
-  boot.kernel.sysctl = {
-    "vm.swappiness" = 10;
-    "kernel.split_lock_mitigate" = 0;
-    "vm.vfs_cache_pressure" = 50;
-    "vm.page-cluster" = 0;
-    "net.core.default_qdisc" = "fq_codel";
-    "net.ipv4.tcp_congestion_control" = "bbr";
-    "net.ipv4.tcp_fastopen" = 3;
-  };
+  # Включаем еженедельную команду fstrim для SSD-накопителей
+  services.fstrim.enable = true;
 
-  # Включаем RTKit для аудио и других приложений с низкой задержкой
-  security.rtkit.enable = true;
-
-  # --- Демоны-оптимизаторы ---
-  services.irqbalance.enable = true;
-  services.ananicy.enable = true;
-
-  # -------------------------------------------------------------------
-  # Основные системные настройки
-  # -------------------------------------------------------------------
-  nixpkgs.config.allowUnfree = true;
+  # --- Локализация и время ---
+  # Устанавливаем часовой пояс
   time.timeZone = "Europe/Moscow";
-  i18n.defaultLocale = "ru_RU.UTF-8";
-  console.keyMap = "ru";
 
-  # -------------------------------------------------------------------
-  # Сеть
-  # -------------------------------------------------------------------
-  networking.networkmanager.enable = true;
-  services.resolved.enable = true;
-  networking.useNetworkd = true;
-  systemd.network.enable = true;
+  # Настраиваем системные локали
+  i18n.defaultLocale = "ru_RU.UTF-8";
+  i18n.extraLocaleSettings = {
+    LC_ADDRESS = "ru_RU.UTF-8";
+    LC_IDENTIFICATION = "ru_RU.UTF-8";
+    LC_MEASUREMENT = "ru_RU.UTF-8";
+    LC_MONETARY = "ru_RU.UTF-8";
+    LC_NAME = "ru_RU.UTF-8";
+    LC_NUMERIC = "ru_RU.UTF-8";
+    LC_PAPER = "ru_RU.UTF-8";
+    LC_TELEPHONE = "ru_RU.UTF-8";
+    LC_TIME = "ru_RU.UTF-8";
+  };
+
+  # Настраиваем раскладку клавиатуры для консоли (TTY)
+  console = {
+    font = "Lat2-Terminus16";
+    keyMap = "ru";
+  };
 }
