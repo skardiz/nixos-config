@@ -4,6 +4,9 @@
 { pkgs, ... }:
 {
   networking.networkmanager.enable = true;
+  # Включаем системную службу DNS, необходимую для NetworkManager
+  services.resolved.enable = true;
+
   services.xserver.enable = true;
   services.xserver.xkb = { layout = "us,ru"; options = "grp:alt_shift_toggle"; };
   services.displayManager.sddm.enable = true;

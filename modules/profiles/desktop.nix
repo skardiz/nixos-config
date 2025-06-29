@@ -11,14 +11,26 @@
     # ../features/vpn.nix
   ];
 
-  # Включаем переключатели по умолчанию для этого профиля
+ # --- НОВЫЙ РАЗДЕЛ ЗДЕСЬ! ---
+  # Определяем стандарт загрузки для всех наших десктопов
+  boot = {
+    loader.systemd-boot.enable = true;
+    loader.efi.canTouchEfiVariables = true;
+    # Устанавливаем таймаут выбора системы в 0 секунд для мгновенной загрузки
+    loader.timeout = 0;
+
+    # Все наши десктопы по умолчанию используют ядро Zen
+    kernelPackages = pkgs.linuxPackages_zen;
+  };
+
+  # Настройки по умолчанию для этого профиля
   my = {
+    packages.enableHelperScripts = true;
     locale.enableRussian = true;
     optimizations = {
       enableSsdTweaks = true;
       enableZlibNg = true;
       enableDesktopResponsiveness = true;
     };
-    # Политики и другие глобальные вещи мы определяем в "Конституции"
   };
 }
