@@ -6,9 +6,9 @@
 {
   imports = [
     # Подключаем наш "пульт управления"
-    ../../modules/options.nix
+    ../../modules/core/options.nix
     # Подключаем наш API для пользователей
-    ../../modules/users.nix
+    ../../modules/core/users.nix
 
     # Эта строка переезжает в файл конкретного хоста,
     # так как не все машины будут десктопами.
