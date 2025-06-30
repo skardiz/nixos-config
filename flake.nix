@@ -4,6 +4,11 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    # --- НОВАЯ СТРОКА ЗДЕСЬ! ---
+    # Добавляем репозиторий с настройками для железа
+    hardware.url = "github:NixOS/nixos-hardware/master";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -14,20 +19,17 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, ... }@inputs: {
+  # Мы должны также добавить 'hardware' в аргументы функции outputs
+  outputs = { self, nixpkgs, home-manager, hardware, ... }@inputs: {
     nixosConfigurations = {
       shershulya = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
 
-        # Мы передаем 'self' (GPS-трекер на корень проекта)
-        # и 'inputs' во все системные модули.
+        # specialArgs уже передает все inputs, так что здесь ничего менять не нужно
         specialArgs = { inherit inputs self; };
 
         modules = [
-          # Подключаем наш хост
           ./hosts/shershulya
-
-          # Подключаем Home Manager на уровне системы
           home-manager.nixosModules.home-manager
         ];
       };

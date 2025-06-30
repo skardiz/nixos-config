@@ -1,5 +1,4 @@
 # hosts/shershulya/default.nix
-# Этот файл теперь - чистейший декларативный манифест.
 { config, pkgs, lib, ... }:
 
 {
@@ -10,6 +9,9 @@
     # Уникальная конфигурация железа для этого хоста
     ./hardware-configuration.nix
     ../../modules/hardware/nvidia-pascal.nix
+
+    # Подключаем твики для Intel CPU только для этой машины
+    ../../modules/hardware/intel-cpu.nix
   ];
 
   # --- Уникальные настройки для хоста 'shershulya' ---
@@ -27,8 +29,4 @@
       description = "Mari";
     };
   };
-
-  # Эта строка больше не нужна, так как 'inputs' передаются
-  # глобально через specialArgs в flake.nix
-  # home-manager.extraSpecialArgs = { inherit inputs; };
 }
