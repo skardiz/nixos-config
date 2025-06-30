@@ -1,41 +1,28 @@
 # modules/options.nix
 #
 # Наш центральный "Пульт Управления".
-# Здесь мы объявляем все кастомные опции и связываем их с реальными настройками NixOS.
 { lib, config, pkgs, ... }:
 
 {
-  # =================================================================
-  # РАЗДЕЛ 1: "ПАНЕЛЬ УПРАВЛЕНИЯ" (options.my)
-  # Здесь мы объявляем наши собственные, красивые "переключатели".
-  # Это наш высокоуровневый API для управления системой.
-  # =================================================================
   options.my = {
     locale.enableRussian = lib.mkEnableOption "Полная русификация системы";
-
     optimizations = {
       enableSsdTweaks = lib.mkEnableOption "Оптимизации для SSD (fstrim)";
       enableZlibNg = lib.mkEnableOption "Высокопроизводительная библиотека zlib-ng";
       enableDesktopResponsiveness = lib.mkEnableOption "Службы для отзывчивости десктопа";
     };
-
     policies = {
       allowUnfree = lib.mkEnableOption "Разрешить несвободные пакеты";
       enableAutoGc = lib.mkEnableOption "Автоматическая сборка мусора";
       enableFlakes = lib.mkEnableOption "Включить Flakes и nix-command";
     };
-
-    # Наш "Базовый Пакет Коммунальных Услуг"
     services.enableCore = lib.mkEnableOption "Включить базовый набор системных сервисов и утилит";
   };
 
-  # =================================================================
-  # РАЗДЕЛ 2: "МАШИННОЕ ОТДЕЛЕНИЕ" (config)
-  # Здесь мы связываем наши красивые "переключатели"
-  # с реальными, низкоуровневыми настройками NixOS.
-  # =================================================================
+  # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
+  # Мы используем lib.mkMerge для чистого объединения всех наших блоков конфигурации.
   config = lib.mkMerge [
-    # --- Блок 1: Индивидуальные настройки ---
+    # Блок 1: Индивидуальные настройки
     {
       time.timeZone = lib.mkIf config.my.locale.enableRussian "Europe/Moscow";
       i18n.defaultLocale = lib.mkIf config.my.locale.enableRussian "ru_RU.UTF-8";
@@ -58,7 +45,7 @@
       nix.settings.experimental-features = lib.mkIf config.my.policies.enableFlakes [ "nix-command" "flakes" ];
     }
 
-    # --- Блок 2: Наш "Базовый Пакет Коммунальных Услуг" ---
+    # Блок 2: Наш "Базовый Пакет Коммунальных Услуг"
     (lib.mkIf config.my.services.enableCore {
       services.timesyncd.enable = true;
       networking.firewall.enable = true;

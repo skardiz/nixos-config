@@ -26,7 +26,6 @@
 
   # Настройки по умолчанию для этого профиля
   my = {
-    packages.enableHelperScripts = true;
     locale.enableRussian = true;
     optimizations = {
       enableSsdTweaks = true;

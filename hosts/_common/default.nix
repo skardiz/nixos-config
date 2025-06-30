@@ -7,8 +7,6 @@
   imports = [
     # Подключаем наш "пульт управления"
     ../../modules/options.nix
-    # Подключаем модуль для кастомных пакетов
-    ../../modules/packages.nix
     # Подключаем наш API для пользователей
     ../../modules/users.nix
 
