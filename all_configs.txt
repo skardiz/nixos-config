@@ -78,38 +78,22 @@
 # ==============================================================================
 
 # home/_common/git.nix
-{ config, pkgs, ... }:
+# Этот модуль теперь использует хелпер из нашей кастомной библиотеки.
+{ config, pkgs, mylib, ... }: # <-- Добавляем 'mylib' в аргументы
 
 let
-  # Создаем "карту" с персональными данными для каждого пользователя.
-  userSpecificSettings = {
-    alex = {
-      userName = "Alex";
-      userEmail = "skardizone@gmail.com";
-    };
-  };
-
-  # ------------------------------------------------------------------
-  # ИЗМЕНЕНИЕ ЗДЕСЬ: Добавляем 'or { ... }' для обработки неизвестных пользователей
-  # ------------------------------------------------------------------
-  # Получаем настройки для ТЕКУЩЕГО пользователя.
-  # Если пользователя нет в нашей карте (например, root),
-  # будет использован набор атрибутов по умолчанию.
-  currentUserSettings = userSpecificSettings.${config.home.username} or {
-    userName = "NixOS User";
-    userEmail = "user@localhost";
-  };
-
+  # Вызываем наш новый, чистый хелпер из библиотеки.
+  # Передаем ему имя текущего пользователя.
+  gitSettings = mylib.myHelpers.getGitConfigForUser config.home.username;
 in
 {
-  # Включаем git и ssh-agent для всех
-  programs.git.enable = true;
+  programs.git = {
+    enable = true;
+    # Применяем результат работы хелпера
+    userName = gitSettings.userName;
+    userEmail = gitSettings.userEmail;
+  };
   services.ssh-agent.enable = true;
-
-  # Применяем персональные или дефолтные настройки
-  # Теперь эти строки всегда будут работать, так как currentUserSettings никогда не будет пустым.
-  programs.git.userName = currentUserSettings.userName;
-  programs.git.userEmail = currentUserSettings.userEmail;
 }
 
 # ==============================================================================
@@ -117,79 +101,28 @@ in
 # ==============================================================================
 
 # home/_common/waydroid-idle.nix
-#
-# Этот модуль создает и управляет сервисом-сторожем для WayDroid.
-# Он автоматически останавливает WayDroid после 5 минут бездействия.
-{ pkgs, ... }:
+# Этот модуль использует хелпер для генерации сложного скрипта.
+{ pkgs, mylib, ... }: # <-- Добавляем 'mylib' в аргументы
 
 let
-  # Создаем скрипт-сторож с помощью функции Nix
-  waydroid-idle-script = pkgs.writeShellScriptBin "waydroid-idle-manager" ''
-    #!${pkgs.bash}/bin/bash
-
-    # Конфигурация
-    TIMEOUT_SECONDS=300 # 5 минут (300 секунд)
-
-    # Переменные состояния
-    last_seen_timestamp=0
-
-    # Функция для проверки наличия окон WayDroid
-    are_waydroid_windows_open() {
-      # Получаем ID всех окон. Так как это пользовательский сервис,
-      # ему доступны DISPLAY и права, не нужно sudo -u.
-      local window_ids=$(${pkgs.xorg.xwininfo}/bin/xwininfo -root -children | grep "^\s\+0x" | awk '{print $1}')
-
-      for id in $window_ids; do
-        if ${pkgs.xorg.xprop}/bin/xprop -id "$id" WM_CLASS | grep -q "waydroid"; then
-          return 0 # Окно найдено
-        fi
-      done
-
-      return 1 # Окон не найдено
-    }
-
-    echo "WayDroid Idle Manager запущен для пользователя $USER."
-
-    # Бесконечный цикл
-    while true; do
-      if are_waydroid_windows_open; then
-        last_seen_timestamp=$(date +%s)
-      else
-        if [[ $last_seen_timestamp -ne 0 ]]; then
-          current_time=$(date +%s)
-          elapsed=$((current_time - last_seen_timestamp))
-
-          if [[ $elapsed -gt $TIMEOUT_SECONDS ]]; then
-            echo "Таймаут ($TIMEOUT_SECONDS сек) достигнут. Остановка WayDroid..."
-            ${pkgs.waydroid}/bin/waydroid session stop
-            sudo ${pkgs.systemd}/bin/systemctl stop waydroid-container.service
-            echo "WayDroid остановлен."
-            last_seen_timestamp=0
-          fi
-        fi
-      fi
-
-      sleep 10 # Проверяем каждые 10 секунд
-    done
-  '';
+  # Генерируем скрипт-сторож, вызывая наш новый хелпер.
+  # Передаем ему 'pkgs', так как они нужны для создания скрипта.
+  waydroid-idle-script = mylib.myHelpers.makeWaydroidIdleScript { inherit pkgs; };
 in
 {
-  # Декларативно создаем и включаем наш пользовательский сервис-сторож
+  # Декларативно создаем и включаем наш пользовательский сервис-сторож.
+  # Этот блок остается без изменений, но теперь он использует
+  # результат работы нашего чистого хелпера.
   systemd.user.services.waydroid-idle-manager = {
-    # Секция [Unit]
     Unit = {
       Description = "WayDroid Idle Manager";
       After = [ "graphical-session.target" ];
     };
-
-    # Секция [Service]
     Service = {
       ExecStart = "${waydroid-idle-script}/bin/waydroid-idle-manager";
       Restart = "always";
       RestartSec = 10;
     };
-
-    # Секция [Install] - в Home Manager она ЕСТЬ и работает
     Install = {
       WantedBy = [ "graphical-session.target" ];
     };
@@ -471,51 +404,6 @@ in
 }
 
 # ==============================================================================
-# ФАЙЛ: ./modules/features/vpn.nix
-# ==============================================================================
-
-# modules/features/vpn.nix
-{ config, pkgs, ... }:
-{
-  # Используем config.boot.kernelPackages, чтобы автоматически
-  # подхватывать правильный модуль для вашего текущего ядра (включая Zen).
-  boot.extraModulePackages = [ config.boot.kernelPackages.amneziawg ];
-
-  environment.systemPackages = with pkgs; [
-    amnezia-vpn
-    amneziawg-tools
-    amneziawg-go
-  ];
-
-  environment.etc."amnezia/amneziawg/awg0.conf" = {
-    text = ''
-      [Interface]
-      PrivateKey = 2Dlk4WaRdfZ++PKIL1DWg9Kzm1oy2SxzPR/Ae+Oo02U=
-      MTU = 1280
-      Address = 172.16.0.2, 2606:4700:110:8e45:d9ad:5eb1:7ff3:d73c
-      DNS = 1.1.1.1, 2606:4700:4700::1111
-      [Peer]
-      PublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=
-      AllowedIPs = 0.0.0.0/0, ::/0
-      Endpoint = 188.114.99.224:1002
-    '';
-    mode = "0400";
-  };
-
-  systemd.services.amnezia-vpn = {
-    description = "AmneziaWG auto-connect service";
-    after = [ "network-online.target" ];
-    wantedBy = [ "multi-user.target" ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      ExecStart = "${pkgs.amneziawg-tools}/bin/awg-quick up awg0";
-      ExecStop = "${pkgs.amneziawg-tools}/bin/awg-quick down awg0";
-    };
-  };
-}
-
-# ==============================================================================
 # ФАЙЛ: ./modules/features/desktop.nix
 # ==============================================================================
 
@@ -537,6 +425,74 @@ in
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
+  };
+}
+
+# ==============================================================================
+# ФАЙЛ: ./modules/features/vpn.nix
+# ==============================================================================
+
+# /home/alex/nixos-config/modules/amnezia.nix
+{ config, pkgs, ... }:
+
+{
+  # --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ ---
+  # 1. Загружаем модуль ядра AmneziaWG при старте системы.
+  # Указываем конкретный пакет модуля ядра, соответствующий твоему ядру.
+  # Если у тебя Zen-ядро, используй 'linux_zen'.
+  # Если стандартное ядро, возможно 'linux_latest' или 'linux_6_6' (проверь свое ядро!).
+  boot.extraModulePackages = [
+    # config.boot.kernelPackages.amneziawg # Это обычно сработает для стандартного ядра
+    # ЕСЛИ У ТЕБЯ ZEN-ЯДРО (или другое специфичное), РАСКОММЕНТИРУЙ СЛЕДУЮЩУЮ СТРОКУ
+    # И ЗАКОММЕНТИРУЙ ПРЕДЫДУЩУЮ (config.boot.kernelPackages.amneziawg)!
+    pkgs.linuxKernel.packages.linux_zen.amneziawg
+  ];
+
+  # 2. Устанавливаем необходимые пакеты для всех пользователей.
+  environment.systemPackages = with pkgs; [
+    amnezia-vpn       # Графический клиент Amnezia
+    amneziawg-tools   # Консольные утилиты, включая awg-quick
+    amneziawg-go      # Userspace-реализация как запасной вариант (ОСТАВЛЯЕМ!)
+  ];
+
+  # 3. Декларативно создаем файл конфигурации по правильному пути.
+  environment.etc."amnezia/amneziawg/awg0.conf".text = ''
+    [Interface]
+    PrivateKey = 2Dlk4WaRdfZ++PKIL1DWg9Kzm1oy2SxzPR/Ae+Oo02U=
+    S1 = 0
+    S2 = 0
+    Jc = 120
+    Jmin = 23
+    Jmax = 911
+    H1 = 1
+    H2 = 2
+    H3 = 3
+    H4 = 4
+    MTU = 1280
+    Address = 172.16.0.2, 2606:4700:110:8e45:d9ad:5eb1:7ff3:d73c
+    DNS = 1.1.1.1, 2606:4700:4700::1111, 1.0.0.1, 2606:4700:4700::1001
+
+    [Peer]
+    PublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=
+    AllowedIPs = 0.0.0.0/0, ::/0
+    Endpoint = 188.114.99.224:1002
+  '';
+  environment.etc."amnezia/amneziawg/awg0.conf".mode = "0400";
+
+
+  # 4. Создаем systemd-сервис для автоматического подключения.
+  systemd.services.amnezia-vpn = {
+    description = "AmneziaWG auto-connect service";
+    after = [ "network-online.target" ];
+    wantedBy = [ "multi-user.target" ];
+
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.amneziawg-tools}/bin/awg-quick up awg0";
+      ExecStop = "${pkgs.amneziawg-tools}/bin/awg-quick down awg0";
+      ExecReload = "${pkgs.amneziawg-tools}/bin/awg-quick down awg0 && ${pkgs.amneziawg-tools}/bin/awg-quick up awg0";
+    };
   };
 }
 
@@ -625,7 +581,7 @@ in
 # modules/users.nix
 #
 # Наш собственный, высокоуровневый модуль для управления пользователями.
-{ lib, config, self, inputs, ... }: # <-- Добавляем 'inputs' в аргументы
+{ lib, config, self, inputs, mylib, ... }: # <-- Добавляем 'mylib' в аргументы
 
 let
   cfg = config.my.users;
@@ -671,11 +627,10 @@ in
       )
       cfg.accounts;
 
-    # --- НОВЫЙ РАЗДЕЛ ЗДЕСЬ! ---
-    # 3. Передаем 'inputs' в модули Home Manager.
-    # Этой строке самое место здесь, так как именно этот модуль
-    # отвечает за генерацию конфигурации Home Manager.
-    home-manager.extraSpecialArgs = { inherit inputs; };
+    # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
+    # 3. Передаем ВСЕ необходимые аргументы в модули Home Manager.
+    # Раньше здесь не было 'mylib' и 'self'.
+    home-manager.extraSpecialArgs = { inherit inputs self mylib; };
 
     # 4. Генерируем блок автологина для основного пользователя
     services.displayManager.autoLogin =
@@ -707,7 +662,7 @@ in
     ../features/desktop.nix
     ../features/gaming.nix
     ../features/android.nix
-    # ../features/vpn.nix
+    ../features/vpn.nix
   ];
 
   # Определяем стандарт загрузки для всех наших десктопов
@@ -892,11 +847,63 @@ pkgs.stdenv.mkDerivation rec {
 # ==============================================================================
 
 # lib/default.nix
-# Наша будущая библиотека кастомных вспомогательных функций.
-# Аргументы, которые мы передаем, чтобы наши функции имели к ним доступ.
-{ pkgs, lib, ... }:
+# Наша библиотека кастомных вспомогательных функций.
+{ lib, ... }:
 
 {
-  # Здесь пока пусто, но мы готовы к будущему!
-  # myHelpers.generateUser = user: { ... };
+  myHelpers = {
+    # --- Инструмент №1: Получение настроек Git ---
+    # Эта функция принимает имя пользователя и возвращает его email и имя.
+    getGitConfigForUser = userName:
+      let
+        # Вся наша "база данных" пользователей теперь живет здесь
+        userMap = {
+          alex = { userName = "Alex"; userEmail = "skardizone@gmail.com"; };
+          # Если появится mari, ее можно будет добавить сюда
+          # mari = { userName = "Mari"; userEmail = "mari@example.com"; };
+        };
+        # Настройки по умолчанию, если пользователь не найден
+        defaultUser = { userName = "NixOS User"; userEmail = "user@localhost"; };
+      in
+      # Логика выбора: ищем в карте или возвращаем дефолт
+      userMap.${userName} or defaultUser;
+
+
+    # --- Инструмент №2: Генератор скрипта Waydroid ---
+    # Эта функция принимает pkgs и генерирует наш скрипт-сторож.
+    makeWaydroidIdleScript = { pkgs }:
+      pkgs.writeShellScriptBin "waydroid-idle-manager" ''
+        #!${pkgs.bash}/bin/bash
+        TIMEOUT_SECONDS=300
+        last_seen_timestamp=0
+        are_waydroid_windows_open() {
+          local window_ids=$(${pkgs.xorg.xwininfo}/bin/xwininfo -root -children | grep "^\s\+0x" | awk '{print $1}')
+          for id in $window_ids; do
+            if ${pkgs.xorg.xprop}/bin/xprop -id "$id" WM_CLASS | grep -q "waydroid"; then
+              return 0
+            fi
+          done
+          return 1
+        }
+        echo "WayDroid Idle Manager запущен для пользователя $USER."
+        while true; do
+          if are_waydroid_windows_open; then
+            last_seen_timestamp=$(date +%s)
+          else
+            if [[ $last_seen_timestamp -ne 0 ]]; then
+              current_time=$(date +%s)
+              elapsed=$((current_time - last_seen_timestamp))
+              if [[ $elapsed -gt $TIMEOUT_SECONDS ]]; then
+                echo "Таймаут ($TIMEOUT_SECONDS сек) достигнут. Остановка WayDroid..."
+                ${pkgs.waydroid}/bin/waydroid session stop
+                sudo ${pkgs.systemd}/bin/systemctl stop waydroid-container.service
+                echo "WayDroid остановлен."
+                last_seen_timestamp=0
+              fi
+            fi
+          fi
+          sleep 10
+        done
+      '';
+  };
 }

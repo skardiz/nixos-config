@@ -17,10 +17,10 @@
 
   outputs = { self, nixpkgs, home-manager, ... }@inputs:
     let
-      # --- НОВЫЙ РАЗДЕЛ ЗДЕСЬ! ---
-      # Импортируем нашу библиотеку и передаем ей стандартную библиотеку Nixpkgs,
-      # чтобы мы могли использовать функции из нее внутри наших собственных функций.
-      mylib = import ./lib { lib = nixpkgs.lib; };
+      # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
+      # Мы должны передать в нашу библиотеку ВСЕ, что ей нужно.
+      # Раньше мы передавали только 'lib'. Теперь мы передаем и 'pkgs'.
+      mylib = import ./lib { lib = nixpkgs.lib; pkgs = nixpkgs.legacyPackages."x86_64-linux"; };
     in
     {
       # --- РАЗДЕЛ 1: КОНФИГУРАЦИИ СИСТЕМ ---
@@ -43,7 +43,6 @@
       };
 
       # --- РАЗДЕЛ 2: КОНФИГУРАЦИИ ПОЛЬЗОВАТЕЛЕЙ (HOME MANAGER) ---
-      # Этот блок позволяет нам управлять конфигурациями пользователей отдельно.
       homeConfigurations = {
         "alex@shershulya" = home-manager.lib.homeManagerConfiguration {
           pkgs = nixpkgs.legacyPackages."x86_64-linux";

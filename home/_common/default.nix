@@ -1,26 +1,25 @@
 # home/_common/default.nix
-# Содержит базовые, общие для всех пользователей настройки Home Manager.
 { pkgs, ... }:
-
 {
   imports = [
+    # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
+    # Подключаем наш новый "Пульт Управления"
+    ./options.nix
+
     ./git.nix
     ./waydroid-idle.nix
   ];
 
-  # --- Базовые настройки Home Manager ---
-  # Это разрешение для ПОЛЬЗОВАТЕЛЯ (для Chrome, Zoom и т.д.)
+  # Базовые настройки Home Manager (без изменений)
   nixpkgs.config.allowUnfree = true;
-  home.stateVersion = "25.11"; # Важно для стабильности
+  home.stateVersion = "25.11";
 
-  # --- Пакеты, которые будут установлены для всех пользователей ---
-  home.packages = with pkgs; [
-    google-chrome
-    libreoffice
-    obsidian
-    telegram-desktop
-    tree
-    zapzap
-    zoom-us
-  ];
+  # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
+  # Убираем жестко закодированный список пакетов
+  # home.packages = [ ... ];
+
+  # Декларативно включаем наборы пакетов, общие для всех пользователей
+  my.home.packages = {
+    common = true; # Включаем базовый набор для всех
+  };
 }
