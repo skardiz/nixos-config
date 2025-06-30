@@ -8,10 +8,13 @@
     # Общая "Конституция" для всех машин
     ../_common/default.nix
 
+    # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
+    # Явно импортируем профиль десктопа, так как эта машина - десктоп.
+    ../../modules/profiles/desktop.nix
+
     # Уникальная конфигурация железа для этого хоста
     ./hardware-configuration.nix
     ../../modules/hardware/nvidia-pascal.nix
-    # Подключаем твики для Intel CPU только для этой машины
     ../../modules/hardware/intel-cpu.nix
   ];
 
