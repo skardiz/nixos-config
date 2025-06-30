@@ -4,18 +4,11 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-
-    # --- ВОССТАНАВЛИВАЕМ ЗДЕСЬ! ---
-    # Мы возвращаем на место недостающие, но критически важные
-    # компоненты для работы с железом и Plasma.
     hardware.url = "github:NixOS/nixos-hardware/master";
-
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    # --- И ЗДЕСЬ ТОЖЕ! ---
     plasma-manager = {
       url = "github:nix-community/plasma-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -32,7 +25,11 @@
           system = "x86_64-linux";
           specialArgs = { inherit inputs self mylib; };
           modules = [
+            # --- ГЛАВНАЯ МАГИЯ! ---
+            # Мы по-прежнему указываем системе использовать нашу папку `overlays`.
+            # Но теперь внутри нее лежит один, простой и понятный файл.
             { nixpkgs.overlays = [ (import ./overlays) ]; }
+
             ./hosts/shershulya
             home-manager.nixosModules.home-manager
           ];
@@ -52,6 +49,4 @@
         };
       };
     };
-}
-
 }
