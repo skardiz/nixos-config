@@ -1,6 +1,6 @@
 # pkgs/dpitunnel/default.nix
 # Наш чертеж для сборки НОВОГО DPITunnel на C++.
-{ lib, stdenv, fetchFromGitHub, cmake, libnl, cpp-httplib, openssl }: # <-- ДОБАВЛЯЕМ openssl, т.к. он тоже нужен
+{ lib, stdenv, fetchFromGitHub, cmake, libnl, cpp-httplib, openssl }:
 
 stdenv.mkDerivation rec {
   pname = "DPITunnel";
@@ -16,7 +16,7 @@ stdenv.mkDerivation rec {
   # Указываем инструменты для сборки
   nativeBuildInputs = [ cmake ];
 
-  # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
+  # --- ГЛАВНОЕ ЗДЕСЬ! ---
   # Мы явно указываем ВСЕ зависимости, которые нужны для сборки,
   # включая 'cpp-httplib' и его зависимость 'openssl'.
   buildInputs = [ libnl cpp-httplib openssl ];
