@@ -3,13 +3,11 @@
 
 {
   # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
-  # Мы указываем точный, совместимый с ядром пакет модуля, который вы нашли.
-  # Это гарантирует, что система установит правильную версию модуля.
-  boot.extraModulePackages = [ pkgs.linuxKernel.packages.${config.boot.kernelPackage.name}.amneziawg ];
-
-  # Эта строка была для быстрой проверки, но правильный путь - через extraModulePackages.
-  # Мы ее убираем, так как теперь делаем все по-правильному.
-  # environment.systemPackages = [ pkgs.linuxKernel.packages.linux_zen.amneziawg ];
+  # Мы используем самый правильный и идиоматичный способ для добавления модулей:
+  # `with config.boot.kernelPackages;`
+  # Это автоматически берет правильный набор пакетов для нашего текущего ядра (Zen)
+  # и ищет в нем нужный нам модуль `amneziawg`.
+  boot.extraModulePackages = with config.boot.kernelPackages; [ amneziawg ];
 
   # Устанавливаем необходимые утилиты (без изменений)
   environment.systemPackages = with pkgs; [
