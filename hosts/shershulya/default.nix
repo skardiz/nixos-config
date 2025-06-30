@@ -10,7 +10,7 @@
 
     # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
     # Явно импортируем профиль десктопа, так как эта машина - десктоп.
-    ../../modules/profiles/desktop.nix
+    ../../modules/roles/desktop.nix
 
     # Уникальная конфигурация железа для этого хоста
     ./hardware-configuration.nix
