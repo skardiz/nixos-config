@@ -1,7 +1,7 @@
 # modules/users.nix
 #
 # Наш собственный, высокоуровневый модуль для управления пользователями.
-{ lib, config, self, inputs, ... }: # <-- Добавляем 'inputs' в аргументы
+{ lib, config, self, inputs, mylib, ... }: # <-- Добавляем 'mylib' в аргументы
 
 let
   cfg = config.my.users;
@@ -47,11 +47,10 @@ in
       )
       cfg.accounts;
 
-    # --- НОВЫЙ РАЗДЕЛ ЗДЕСЬ! ---
-    # 3. Передаем 'inputs' в модули Home Manager.
-    # Этой строке самое место здесь, так как именно этот модуль
-    # отвечает за генерацию конфигурации Home Manager.
-    home-manager.extraSpecialArgs = { inherit inputs; };
+    # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
+    # 3. Передаем ВСЕ необходимые аргументы в модули Home Manager.
+    # Раньше здесь не было 'mylib' и 'self'.
+    home-manager.extraSpecialArgs = { inherit inputs self mylib; };
 
     # 4. Генерируем блок автологина для основного пользователя
     services.displayManager.autoLogin =
