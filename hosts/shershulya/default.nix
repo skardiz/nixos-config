@@ -18,7 +18,7 @@
   # --- Уникальные настройки для хоста 'shershulya' ---
 
   networking.hostName = "shershulya";
-  system.stateVersion = "25.11"; # <-- "Год постройки" этой машины. Теперь на своем месте.
+  system.stateVersion = "25.11";
 
   # Декларативное описание пользователей через наш кастомный API
   my.users.accounts = {
@@ -31,7 +31,4 @@
       description = "Mari";
     };
   };
-
-  # Передача 'inputs' в модули Home Manager
-  home-manager.extraSpecialArgs = { inherit inputs; };
 }
