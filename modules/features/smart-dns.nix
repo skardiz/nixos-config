@@ -1,12 +1,19 @@
 # modules/features/smart-dns.nix
 #
-# Наш умный DNS-прокси на базе dnscrypt-proxy2.
-{ config, pkgs, lib, ... }: # <-- Убедитесь, что 'lib' здесь есть
+# Финальная, отказоустойчивая конфигурация для dnscrypt-proxy2.
+{ config, pkgs, lib, ... }:
 
 {
-  # Включаем сам сервис
+  # --- ПРИКАЗ №1: Полностью увольняем старый сервис ---
+  # Это гарантирует, что никто другой не займет порт 53.
+  services.resolved.enable = false;
+
+  # Включаем наш новый сервис
   services.dnscrypt-proxy2 = {
     enable = true;
+    # --- ПРИКАЗ №3: Отключаем сокет-активацию ---
+    # Это упрощает запуск и убирает еще один источник гонки состояний.
+    socket.enable = false;
     settings = {
       listen_addresses = [ "127.0.0.1:53" ];
       lb_strategy = "p2";
@@ -18,11 +25,13 @@
     };
   };
 
-  # Указываем системе использовать НАШ локальный DNS-прокси для ВСЕХ запросов.
-  networking.nameservers = [ "127.0.0.1" ];
+  # --- ПРИКАЗ №2: Ждем полной готовности сети ---
+  # Мы добавляем явную зависимость от network-online.target,
+  # чтобы сервис стартовал только тогда, когда интернет точно есть.
+  systemd.services.dnscrypt-proxy2.after = [ "network-online.target" ];
+  systemd.services.dnscrypt-proxy2.wants = [ "network-online.target" ];
 
-  # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
-  # Мы используем lib.mkForce, чтобы принудительно установить НАШЕ значение 'none',
-  # игнорируя стандартное значение 'systemd-resolved'. Это решает конфликт.
+  # Указываем системе использовать НАШ локальный DNS-прокси.
+  networking.nameservers = [ "127.0.0.1" ];
   networking.networkmanager.dns = lib.mkForce "none";
 }
