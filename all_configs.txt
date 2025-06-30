@@ -11,7 +11,7 @@
     sops
     gnupg
     pinentry-curses
-    thorium-browser
+    #thorium-browser
   ];
 }
 
@@ -835,22 +835,14 @@ in
 
 # overlays/default.nix
 #
-# Точка входа в нашу мастерскую. Передает управление мастеру-бригадиру.
-final: prev: import ../pkgs/_all.nix { pkgs = final; }
+# Наш единый и единственный центр управления всеми кастомными пакетами.
+final: prev: {
+  # Инструкция по сборке "лазерного резака" DPITunnel.
+  # Мы используем `prev.callPackage`, чтобы он сам нашел все зависимости.
+  dpitunnel = prev.callPackage ../pkgs/dpitunnel { };
 
-# ==============================================================================
-# ФАЙЛ: ./pkgs/default.nix
-# ==============================================================================
-
-# pkgs/default.nix
-{ pkgs }:
-
-{
-  # Регистрируем наш новый пакет
-  thorium-browser = pkgs.callPackage ./thorium-browser { };
-
-  # Если в будущем появятся другие пакеты, добавляйте их сюда
-  # another-package = pkgs.callPackage ./another-package { };
+  # Инструкция по сборке браузера Thorium.
+  thorium-browser = prev.callPackage ../pkgs/thorium-browser { };
 }
 
 # ==============================================================================
@@ -947,27 +939,6 @@ stdenv.mkDerivation rec {
 }
 
 # ==============================================================================
-# ФАЙЛ: ./pkgs/_all.nix
-# ==============================================================================
-
-# pkgs/_all.nix
-#
-# Это — главный сборочный конвейер нашей мастерской.
-# Он знает, как вызывать станки для каждой кастомной детали.
-{ pkgs }:
-
-{
-  # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
-  # Мы убираем пустые скобки `{}`. Теперь `pkgs.callPackage`
-  # будет автоматически искать ВСЕ недостающие зависимости
-  # (вроде `cpp-httplib` и `openssl`) в основном наборе пакетов `pkgs`.
-  dpitunnel = pkgs.callPackage ./dpitunnel;
-
-  # Для второго пакета делаем то же самое.
-  thorium-browser = pkgs.callPackage ./thorium-browser;
-}
-
-# ==============================================================================
 # ФАЙЛ: ./flake.nix
 # ==============================================================================
 
@@ -990,40 +961,32 @@ stdenv.mkDerivation rec {
 
   outputs = { self, nixpkgs, home-manager, ... }@inputs:
     let
-      # Наша кастомная библиотека остается без изменений.
       mylib = import ./lib { lib = nixpkgs.lib; pkgs = nixpkgs.legacyPackages."x86_64-linux"; };
     in
     {
-      # --- РАЗДЕЛ 1: КОНФИГУРАЦИИ СИСТЕМ ---
       nixosConfigurations = {
         shershulya = nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
           specialArgs = { inherit inputs self mylib; };
-
           modules = [
             # --- ГЛАВНАЯ МАГИЯ! ---
-            # Мы указываем системе, что нужно использовать ВСЕ оверлеи
-            # из нашей папки `overlays`. Это самый чистый и правильный способ.
+            # Мы по-прежнему указываем системе использовать нашу папку `overlays`.
+            # Но теперь внутри нее лежит один, простой и понятный файл.
             { nixpkgs.overlays = [ (import ./overlays) ]; }
 
-            # Все остальные модули остаются без изменений.
             ./hosts/shershulya
             home-manager.nixosModules.home-manager
           ];
         };
       };
 
-      # --- РАЗДЕЛ 2: КОНФИГУРАЦИИ ПОЛЬЗОВАТЕЛЕЙ (HOME MANAGER) ---
       homeConfigurations = {
         "alex@shershulya" = home-manager.lib.homeManagerConfiguration {
-          # Для Home Manager мы должны явно передать пакеты, которые уже
-          # содержат наши оверлеи. Мы используем .extend для этого.
           pkgs = nixpkgs.legacyPackages."x86_64-linux".extend (import ./overlays);
           extraSpecialArgs = { inherit inputs self mylib; };
           modules = [ ./home/alex ];
         };
         "mari@shershulya" = home-manager.lib.homeManagerConfiguration {
-          # И для второго пользователя тоже.
           pkgs = nixpkgs.legacyPackages."x86_64-linux".extend (import ./overlays);
           extraSpecialArgs = { inherit inputs self mylib; };
           modules = [ ./home/mari ];
