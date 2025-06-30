@@ -11,7 +11,7 @@
     ../features/desktop.nix
     ../features/gaming.nix
     ../features/android.nix
-    ../features/vpn.nix
+    #../features/vpn.nix
   ];
 
   # Определяем стандарт загрузки для всех наших десктопов
