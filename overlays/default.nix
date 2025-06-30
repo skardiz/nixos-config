@@ -1,4 +1,11 @@
 # overlays/default.nix
 #
-# Точка входа в нашу мастерскую. Передает управление мастеру-бригадиру.
-final: prev: import ../pkgs/_all.nix { pkgs = final; }
+# Наш единый и единственный центр управления всеми кастомными пакетами.
+final: prev: {
+  # Инструкция по сборке "лазерного резака" DPITunnel.
+  # Мы используем `prev.callPackage`, чтобы он сам нашел все зависимости.
+  dpitunnel = prev.callPackage ../pkgs/dpitunnel { };
+
+  # Инструкция по сборке браузера Thorium.
+  thorium-browser = prev.callPackage ../pkgs/thorium-browser { };
+}
