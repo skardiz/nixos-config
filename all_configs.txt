@@ -1,0 +1,902 @@
+# ==============================================================================
+# ФАЙЛ: ./home/alex/packages.nix
+# ==============================================================================
+
+# hm-modules/alex/packages.nix
+{ pkgs, ... }:
+
+{
+  home.packages = with pkgs; [
+    bash
+    sops
+    gnupg
+    pinentry-curses
+    #thorium-browser
+  ];
+}
+
+# ==============================================================================
+# ФАЙЛ: ./home/alex/default.nix
+# ==============================================================================
+
+# home/alex/default.nix
+{ pkgs, config, ... }:
+{
+  imports = [
+    ../_common # Импортируем ВСЕ общие настройки
+
+    # Персональные модули Алекса
+    ./packages.nix
+  ];
+}
+
+# ==============================================================================
+# ФАЙЛ: ./home/mari/default.nix
+# ==============================================================================
+
+# home/mari/default.nix
+{ pkgs, config, ... }:
+{
+  imports = [
+    ../_common # Импортируем ВСЕ общие настройки
+  ];
+}
+
+# ==============================================================================
+# ФАЙЛ: ./home/_common/default.nix
+# ==============================================================================
+
+# home/_common/default.nix
+# Содержит базовые, общие для всех пользователей настройки Home Manager.
+{ pkgs, ... }:
+
+{
+  imports = [
+    ./git.nix
+    ./waydroid-idle.nix
+  ];
+
+  # --- Базовые настройки Home Manager ---
+  # Это разрешение для ПОЛЬЗОВАТЕЛЯ (для Chrome, Zoom и т.д.)
+  nixpkgs.config.allowUnfree = true;
+  home.stateVersion = "25.11"; # Важно для стабильности
+
+  # --- Пакеты, которые будут установлены для всех пользователей ---
+  home.packages = with pkgs; [
+    google-chrome
+    libreoffice
+    obsidian
+    telegram-desktop
+    tree
+    zapzap
+    zoom-us
+  ];
+}
+
+# ==============================================================================
+# ФАЙЛ: ./home/_common/git.nix
+# ==============================================================================
+
+# home/_common/git.nix
+{ config, pkgs, ... }:
+
+let
+  # Создаем "карту" с персональными данными для каждого пользователя.
+  userSpecificSettings = {
+    alex = {
+      userName = "Alex";
+      userEmail = "skardizone@gmail.com";
+    };
+  };
+
+  # ------------------------------------------------------------------
+  # ИЗМЕНЕНИЕ ЗДЕСЬ: Добавляем 'or { ... }' для обработки неизвестных пользователей
+  # ------------------------------------------------------------------
+  # Получаем настройки для ТЕКУЩЕГО пользователя.
+  # Если пользователя нет в нашей карте (например, root),
+  # будет использован набор атрибутов по умолчанию.
+  currentUserSettings = userSpecificSettings.${config.home.username} or {
+    userName = "NixOS User";
+    userEmail = "user@localhost";
+  };
+
+in
+{
+  # Включаем git и ssh-agent для всех
+  programs.git.enable = true;
+  services.ssh-agent.enable = true;
+
+  # Применяем персональные или дефолтные настройки
+  # Теперь эти строки всегда будут работать, так как currentUserSettings никогда не будет пустым.
+  programs.git.userName = currentUserSettings.userName;
+  programs.git.userEmail = currentUserSettings.userEmail;
+}
+
+# ==============================================================================
+# ФАЙЛ: ./home/_common/waydroid-idle.nix
+# ==============================================================================
+
+# home/_common/waydroid-idle.nix
+#
+# Этот модуль создает и управляет сервисом-сторожем для WayDroid.
+# Он автоматически останавливает WayDroid после 5 минут бездействия.
+{ pkgs, ... }:
+
+let
+  # Создаем скрипт-сторож с помощью функции Nix
+  waydroid-idle-script = pkgs.writeShellScriptBin "waydroid-idle-manager" ''
+    #!${pkgs.bash}/bin/bash
+
+    # Конфигурация
+    TIMEOUT_SECONDS=300 # 5 минут (300 секунд)
+
+    # Переменные состояния
+    last_seen_timestamp=0
+
+    # Функция для проверки наличия окон WayDroid
+    are_waydroid_windows_open() {
+      # Получаем ID всех окон. Так как это пользовательский сервис,
+      # ему доступны DISPLAY и права, не нужно sudo -u.
+      local window_ids=$(${pkgs.xorg.xwininfo}/bin/xwininfo -root -children | grep "^\s\+0x" | awk '{print $1}')
+
+      for id in $window_ids; do
+        if ${pkgs.xorg.xprop}/bin/xprop -id "$id" WM_CLASS | grep -q "waydroid"; then
+          return 0 # Окно найдено
+        fi
+      done
+
+      return 1 # Окон не найдено
+    }
+
+    echo "WayDroid Idle Manager запущен для пользователя $USER."
+
+    # Бесконечный цикл
+    while true; do
+      if are_waydroid_windows_open; then
+        last_seen_timestamp=$(date +%s)
+      else
+        if [[ $last_seen_timestamp -ne 0 ]]; then
+          current_time=$(date +%s)
+          elapsed=$((current_time - last_seen_timestamp))
+
+          if [[ $elapsed -gt $TIMEOUT_SECONDS ]]; then
+            echo "Таймаут ($TIMEOUT_SECONDS сек) достигнут. Остановка WayDroid..."
+            ${pkgs.waydroid}/bin/waydroid session stop
+            sudo ${pkgs.systemd}/bin/systemctl stop waydroid-container.service
+            echo "WayDroid остановлен."
+            last_seen_timestamp=0
+          fi
+        fi
+      fi
+
+      sleep 10 # Проверяем каждые 10 секунд
+    done
+  '';
+in
+{
+  # Декларативно создаем и включаем наш пользовательский сервис-сторож
+  systemd.user.services.waydroid-idle-manager = {
+    # Секция [Unit]
+    Unit = {
+      Description = "WayDroid Idle Manager";
+      After = [ "graphical-session.target" ];
+    };
+
+    # Секция [Service]
+    Service = {
+      ExecStart = "${waydroid-idle-script}/bin/waydroid-idle-manager";
+      Restart = "always";
+      RestartSec = 10;
+    };
+
+    # Секция [Install] - в Home Manager она ЕСТЬ и работает
+    Install = {
+      WantedBy = [ "graphical-session.target" ];
+    };
+  };
+}
+
+# ==============================================================================
+# ФАЙЛ: ./hosts/shershulya/hardware-configuration.nix
+# ==============================================================================
+
+# Do not modify this file!  It was generated by ‘nixos-generate-config’
+# and may be overwritten by future invocations.  Please make changes
+# to /etc/nixos/configuration.nix instead.
+{ config, lib, pkgs, modulesPath, ... }:
+
+{
+  imports =
+    [ (modulesPath + "/installer/scan/not-detected.nix")
+    ];
+
+  boot.initrd.availableKernelModules = [ "xhci_pci" "ahci" "nvme" "usbhid" "usb_storage" "sd_mod" ];
+  boot.initrd.kernelModules = [ ];
+  boot.kernelModules = [ "kvm-intel" ];
+  boot.extraModulePackages = [ ];
+
+  fileSystems."/" =
+    { device = "/dev/disk/by-uuid/85de1e10-4038-408b-a4a3-b8da3cd8f18b";
+      fsType = "btrfs";
+      options = [ "subvol=root" ];
+    };
+
+  fileSystems."/home" =
+    { device = "/dev/disk/by-uuid/85de1e10-4038-408b-a4a3-b8da3cd8f18b";
+      fsType = "btrfs";
+      options = [ "subvol=home" ];
+    };
+
+  fileSystems."/nix" =
+    { device = "/dev/disk/by-uuid/85de1e10-4038-408b-a4a3-b8da3cd8f18b";
+      fsType = "btrfs";
+      options = [ "subvol=nix" ];
+    };
+
+  fileSystems."/var/log" =
+    { device = "/dev/disk/by-uuid/85de1e10-4038-408b-a4a3-b8da3cd8f18b";
+      fsType = "btrfs";
+      options = [ "subvol=log" ];
+    };
+
+  fileSystems."/persist" =
+    { device = "/dev/disk/by-uuid/85de1e10-4038-408b-a4a3-b8da3cd8f18b";
+      fsType = "btrfs";
+      options = [ "subvol=persist" ];
+    };
+
+  fileSystems."/snapshots" =
+    { device = "/dev/disk/by-uuid/85de1e10-4038-408b-a4a3-b8da3cd8f18b";
+      fsType = "btrfs";
+      options = [ "subvol=snapshots" ];
+    };
+
+  fileSystems."/var/cache" =
+    { device = "/dev/disk/by-uuid/85de1e10-4038-408b-a4a3-b8da3cd8f18b";
+      fsType = "btrfs";
+      options = [ "subvol=cache" ];
+    };
+
+  fileSystems."/tmp" =
+    { device = "/dev/disk/by-uuid/85de1e10-4038-408b-a4a3-b8da3cd8f18b";
+      fsType = "btrfs";
+      options = [ "subvol=tmp" ];
+    };
+
+  fileSystems."/games" =
+    { device = "/dev/disk/by-uuid/85de1e10-4038-408b-a4a3-b8da3cd8f18b";
+      fsType = "btrfs";
+      options = [ "subvol=games" ];
+    };
+
+  fileSystems."/boot" =
+    { device = "/dev/disk/by-uuid/9B9A-4548";
+      fsType = "vfat";
+      options = [ "fmask=0022" "dmask=0022" ];
+    };
+
+  swapDevices = [ ];
+
+  # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
+  # (the default) this is the recommended approach. When using systemd-networkd it's
+  # still possible to use this option, but it's recommended to use it in conjunction
+  # with explicit per-interface declarations with `networking.interfaces.<interface>.useDHCP`.
+  networking.useDHCP = lib.mkDefault true;
+  # networking.interfaces.enp0s31f6.useDHCP = lib.mkDefault true;
+
+  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+  hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+}
+
+# ==============================================================================
+# ФАЙЛ: ./hosts/shershulya/default.nix
+# ==============================================================================
+
+# hosts/shershulya/default.nix
+#
+# Этот файл отвечает ТОЛЬКО за то, что уникально для машины 'shershulya'.
+{ config, pkgs, inputs, lib, ... }:
+
+{
+  imports = [
+    # Общая "Конституция" для всех машин
+    ../_common/default.nix
+
+    # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
+    # Явно импортируем профиль десктопа, так как эта машина - десктоп.
+    ../../modules/roles/desktop.nix
+
+    # Уникальная конфигурация железа для этого хоста
+    ./hardware-configuration.nix
+    ../../modules/hardware/nvidia-pascal.nix
+    ../../modules/hardware/intel-cpu.nix
+  ];
+
+  # --- Уникальные настройки для хоста 'shershulya' ---
+
+  networking.hostName = "shershulya";
+  system.stateVersion = "25.11";
+
+  # Декларативное описание пользователей через наш кастомный API
+  my.users.accounts = {
+    alex = {
+      isMainUser = true;
+      description = "Alex";
+      extraGroups = [ "adbusers" ];
+    };
+    mari = {
+      description = "Mari";
+    };
+  };
+}
+
+# ==============================================================================
+# ФАЙЛ: ./hosts/_common/default.nix
+# ==============================================================================
+
+# hosts/_common/default.nix
+#
+# "Конституция" для всех моих систем.
+{ pkgs, ... }:
+
+{
+  imports = [
+    # Подключаем наш "пульт управления"
+    ../../modules/core/options.nix
+    # Подключаем наш API для пользователей
+    ../../modules/core/users.nix
+
+    # Эта строка переезжает в файл конкретного хоста,
+    # так как не все машины будут десктопами.
+    # ../../modules/profiles/desktop.nix
+  ];
+
+  # --- Глобальные политики и сервисы ---
+  # Декларативно включаем все, что нам нужно, через наш собственный API
+  my = {
+    # Включаем наши глобальные политики
+    policies = {
+      allowUnfree = true;
+      enableAutoGc = true;
+      enableFlakes = true;
+    };
+
+    # Включаем наш "Базовый Пакет Коммунальных Услуг"
+    services.enableCore = true;
+  };
+}
+
+# ==============================================================================
+# ФАЙЛ: ./modules/hardware/nvidia-pascal.nix
+# ==============================================================================
+
+# /home/alex/nixos-config/modules/nvidia.nix
+{ config, pkgs, lib, ... }:
+
+{
+  # Параметры ядра для корректной работы NVIDIA на Wayland
+  boot.kernelParams = [ "nvidia-drm.modeset=1" "nvidia_drm.fbdev=1" "nvidia.NVreg_EnableGpuFirmware=0" ];
+
+  # Новые опции для графики (замена hardware.opengl)
+  hardware.graphics = {
+    enable = true;
+    enable32Bit = true;
+    extraPackages = with pkgs; [
+      # Пакеты для аппаратного ускорения видео
+      nvidia-vaapi-driver
+      libvdpau-va-gl
+    ];
+  };
+
+  hardware.nvidia = {
+    modesetting.enable = true;
+    powerManagement.enable = true;
+    powerManagement.finegrained = false;
+    open = false;
+    nvidiaSettings = true;
+    package = config.boot.kernelPackages.nvidiaPackages.beta;
+    forceFullCompositionPipeline = true;
+  };
+
+  services.xserver.videoDrivers = [ "nvidia" ];
+
+  # Переменные окружения для Wayland
+  environment.sessionVariables = {
+    LIBVA_DRIVER_NAME = "nvidia";
+    XDG_SESSION_TYPE = "wayland";
+    GBM_BACKEND = "nvidia-drm";
+    __GLX_VENDOR_LIBRARY_NAME = "nvidia";
+    WLR_NO_HARDWARE_CURSORS = "1";
+    NIXOS_OZONE_WL = "1";
+  };
+
+  # Дополнительные системные пакеты (с исправленными именами)
+  environment.systemPackages = with pkgs; [
+  ];
+}
+
+# ==============================================================================
+# ФАЙЛ: ./modules/hardware/intel-cpu.nix
+# ==============================================================================
+
+# modules/hardware/intel-cpu.nix
+#
+# Этот модуль применяет общие оптимизации для процессоров Intel
+# из репозитория nixos-hardware.
+{ inputs, ... }:
+{
+  imports = [
+    # Указываем путь к модулю внутри нашего нового 'inputs.hardware'
+    inputs.hardware.nixosModules.common-cpu-intel
+  ];
+}
+
+# ==============================================================================
+# ФАЙЛ: ./modules/features/android.nix
+# ==============================================================================
+
+# modules/features/android.nix
+{ pkgs, ... }:
+{
+  virtualisation.waydroid.enable = true;
+  systemd.services.waydroid-container.wantedBy = [ "multi-user.target" ];
+
+  fileSystems."/var/lib/waydroid/data/media/0/Shared" = {
+    device = "/home/shared/waydroid";
+    fsType = "none";
+    options = [ "bind" ];
+  };
+
+  environment.systemPackages = with pkgs; [
+    wl-clipboard
+    xorg.xwininfo
+    xorg.xprop
+  ];
+}
+
+# ==============================================================================
+# ФАЙЛ: ./modules/features/gaming.nix
+# ==============================================================================
+
+# modules/features/gaming.nix
+{ pkgs, ... }:
+{
+  environment.sessionVariables = { MANGOHUD = "1"; };
+  programs.steam = {
+    enable = true;
+    extraCompatPackages = [ pkgs.proton-ge-bin ];
+  };
+  programs.gamemode.enable = true;
+  environment.systemPackages = with pkgs; [ gamescope ];
+}
+
+# ==============================================================================
+# ФАЙЛ: ./modules/features/vpn.nix
+# ==============================================================================
+
+# modules/features/vpn.nix
+{ config, pkgs, ... }:
+{
+  # Используем config.boot.kernelPackages, чтобы автоматически
+  # подхватывать правильный модуль для вашего текущего ядра (включая Zen).
+  boot.extraModulePackages = [ config.boot.kernelPackages.amneziawg ];
+
+  environment.systemPackages = with pkgs; [
+    amnezia-vpn
+    amneziawg-tools
+    amneziawg-go
+  ];
+
+  environment.etc."amnezia/amneziawg/awg0.conf" = {
+    text = ''
+      [Interface]
+      PrivateKey = 2Dlk4WaRdfZ++PKIL1DWg9Kzm1oy2SxzPR/Ae+Oo02U=
+      MTU = 1280
+      Address = 172.16.0.2, 2606:4700:110:8e45:d9ad:5eb1:7ff3:d73c
+      DNS = 1.1.1.1, 2606:4700:4700::1111
+      [Peer]
+      PublicKey = bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=
+      AllowedIPs = 0.0.0.0/0, ::/0
+      Endpoint = 188.114.99.224:1002
+    '';
+    mode = "0400";
+  };
+
+  systemd.services.amnezia-vpn = {
+    description = "AmneziaWG auto-connect service";
+    after = [ "network-online.target" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.amneziawg-tools}/bin/awg-quick up awg0";
+      ExecStop = "${pkgs.amneziawg-tools}/bin/awg-quick down awg0";
+    };
+  };
+}
+
+# ==============================================================================
+# ФАЙЛ: ./modules/features/desktop.nix
+# ==============================================================================
+
+# modules/features/desktop.nix
+#
+# Этот модуль реализует все, что нужно для базового десктопа.
+{ pkgs, ... }:
+{
+  networking.networkmanager.enable = true;
+  # Включаем системную службу DNS, необходимую для NetworkManager
+  services.resolved.enable = true;
+
+  services.xserver.enable = true;
+  services.xserver.xkb = { layout = "us,ru"; options = "grp:alt_shift_toggle"; };
+  services.displayManager.sddm.enable = true;
+  services.desktopManager.plasma6.enable = true;
+  services.pipewire = {
+    enable = true;
+    alsa.enable = true;
+    alsa.support32Bit = true;
+    pulse.enable = true;
+  };
+}
+
+# ==============================================================================
+# ФАЙЛ: ./modules/core/options.nix
+# ==============================================================================
+
+# modules/options.nix
+#
+# Наш центральный "Пульт Управления".
+# Здесь мы объявляем все кастомные опции и связываем их с реальными настройками NixOS.
+{ lib, config, pkgs, ... }:
+
+{
+  # =================================================================
+  # РАЗДЕЛ 1: "ПАНЕЛЬ УПРАВЛЕНИЯ" (options.my)
+  # Здесь мы объявляем наши собственные, красивые "переключатели".
+  # Это наш высокоуровневый API для управления системой.
+  # =================================================================
+  options.my = {
+    locale.enableRussian = lib.mkEnableOption "Полная русификация системы";
+
+    optimizations = {
+      enableSsdTweaks = lib.mkEnableOption "Оптимизации для SSD (fstrim)";
+      enableZlibNg = lib.mkEnableOption "Высокопроизводительная библиотека zlib-ng";
+      enableDesktopResponsiveness = lib.mkEnableOption "Службы для отзывчивости десктопа";
+    };
+
+    policies = {
+      allowUnfree = lib.mkEnableOption "Разрешить несвободные пакеты";
+      enableAutoGc = lib.mkEnableOption "Автоматическая сборка мусора";
+      enableFlakes = lib.mkEnableOption "Включить Flakes и nix-command";
+    };
+
+    # Наш "Базовый Пакет Коммунальных Услуг"
+    services.enableCore = lib.mkEnableOption "Включить базовый набор системных сервисов и утилит";
+  };
+
+  # =================================================================
+  # РАЗДЕЛ 2: "МАШИННОЕ ОТДЕЛЕНИЕ" (config)
+  # Здесь мы связываем наши красивые "переключатели"
+  # с реальными, низкоуровневыми настройками NixOS.
+  # =================================================================
+  config = lib.mkMerge [
+    # --- Блок 1: Индивидуальные настройки ---
+    {
+      time.timeZone = lib.mkIf config.my.locale.enableRussian "Europe/Moscow";
+      i18n.defaultLocale = lib.mkIf config.my.locale.enableRussian "ru_RU.UTF-8";
+      console.keyMap = lib.mkIf config.my.locale.enableRussian "ru";
+
+      services.fstrim.enable = lib.mkIf config.my.optimizations.enableSsdTweaks true;
+      nixpkgs.config.zlib.package = lib.mkIf config.my.optimizations.enableZlibNg pkgs.zlib-ng;
+
+      security.rtkit.enable = lib.mkIf config.my.optimizations.enableDesktopResponsiveness true;
+      services.irqbalance.enable = lib.mkIf config.my.optimizations.enableDesktopResponsiveness true;
+      services.ananicy.enable = lib.mkIf config.my.optimizations.enableDesktopResponsiveness true;
+
+      nixpkgs.config.allowUnfree = lib.mkIf config.my.policies.allowUnfree true;
+      nix.gc = lib.mkIf config.my.policies.enableAutoGc {
+        automatic = true;
+        dates = "weekly";
+        options = "--delete-older-than 7d";
+      };
+      nix.optimise.automatic = lib.mkIf config.my.policies.enableAutoGc true;
+      nix.settings.experimental-features = lib.mkIf config.my.policies.enableFlakes [ "nix-command" "flakes" ];
+    }
+
+    # --- Блок 2: Наш "Базовый Пакет Коммунальных Услуг" ---
+    (lib.mkIf config.my.services.enableCore {
+      services.timesyncd.enable = true;
+      networking.firewall.enable = true;
+      environment.systemPackages = [
+        pkgs.git
+        pkgs.nix-index
+      ];
+      programs.nix-index.enable = true;
+      programs.command-not-found.enable = false;
+    })
+  ];
+}
+
+# ==============================================================================
+# ФАЙЛ: ./modules/core/users.nix
+# ==============================================================================
+
+# modules/users.nix
+#
+# Наш собственный, высокоуровневый модуль для управления пользователями.
+{ lib, config, self, inputs, ... }: # <-- Добавляем 'inputs' в аргументы
+
+let
+  cfg = config.my.users;
+in
+{
+  # --- Объявляем наш API для пользователей ---
+  options.my.users.accounts = lib.mkOption {
+    type = with lib.types; attrsOf (submodule {
+      options = {
+        isMainUser = lib.mkEnableOption "Этот пользователь является основным (для автологина)";
+        description = lib.mkOption {
+          type = str;
+          default = "";
+          description = "Полное имя пользователя.";
+        };
+        extraGroups = lib.mkOption {
+          type = listOf str;
+          default = [];
+          description = "Дополнительные группы для пользователя.";
+        };
+      };
+    });
+    default = {};
+    description = "Декларативное описание всех пользователей в системе.";
+  };
+
+  # --- Генерируем конфигурацию на основе нашего API ---
+  config = {
+    # 1. Генерируем блок users.users
+    users.users = lib.mapAttrs
+      (name: userCfg: {
+        isNormalUser = true;
+        description = userCfg.description;
+        extraGroups = [ "wheel" "networkmanager" "video" ] ++ userCfg.extraGroups;
+      })
+      cfg.accounts;
+
+    # 2. Генерируем блок home-manager.users
+    home-manager.users = lib.mapAttrs
+      (name: _:
+        # Мы строим "чистый" путь от корня проекта, используя 'self'.
+        import "${self}/home/${name}"
+      )
+      cfg.accounts;
+
+    # --- НОВЫЙ РАЗДЕЛ ЗДЕСЬ! ---
+    # 3. Передаем 'inputs' в модули Home Manager.
+    # Этой строке самое место здесь, так как именно этот модуль
+    # отвечает за генерацию конфигурации Home Manager.
+    home-manager.extraSpecialArgs = { inherit inputs; };
+
+    # 4. Генерируем блок автологина для основного пользователя
+    services.displayManager.autoLogin =
+      let
+        mainUsers = lib.filterAttrs (name: userCfg: userCfg.isMainUser) cfg.accounts;
+        mainUserName = lib.head (lib.attrNames mainUsers);
+      in
+      lib.mkIf (mainUsers != {}) {
+        enable = true;
+        user = mainUserName;
+      };
+  };
+}
+
+# ==============================================================================
+# ФАЙЛ: ./modules/roles/desktop.nix
+# ==============================================================================
+
+# modules/profiles/desktop.nix
+#
+# Это универсальный профиль ("набор LEGO") для любого вашего "основного десктопа".
+# --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
+# Мы превращаем этот файл в функцию, которая принимает 'pkgs' в качестве аргумента.
+{ pkgs, ... }:
+
+{
+  imports = [
+    # Подключаем "кирпичики"-фичи
+    ../features/desktop.nix
+    ../features/gaming.nix
+    ../features/android.nix
+    # ../features/vpn.nix
+  ];
+
+  # Определяем стандарт загрузки для всех наших десктопов
+  boot = {
+    loader.systemd-boot.enable = true;
+    loader.efi.canTouchEfiVariables = true;
+    loader.timeout = 0;
+
+    # Теперь 'pkgs' здесь известен, и эта строка будет работать
+    kernelPackages = pkgs.linuxPackages_zen;
+  };
+
+  # Настройки по умолчанию для этого профиля
+  my = {
+    locale.enableRussian = true;
+    optimizations = {
+      enableSsdTweaks = true;
+      enableZlibNg = true;
+      enableDesktopResponsiveness = true;
+    };
+  };
+}
+
+# ==============================================================================
+# ФАЙЛ: ./overlays/default.nix
+# ==============================================================================
+
+# overlays/default.nix
+self: super:
+
+let
+  # Импортируем все наши кастомные пакеты из папки `pkgs`
+  # Мы передаем `super` в качестве `pkgs`, чтобы наши пакеты
+  # могли использовать зависимости из стандартного nixpkgs.
+  customPkgs = import ../pkgs { pkgs = super; };
+in
+# Добавляем наши кастомные пакеты в финальный набор пакетов.
+# Например, если в customPkgs есть `thorium-browser`, он станет
+# доступен как `pkgs.thorium-browser`.
+customPkgs
+
+# ==============================================================================
+# ФАЙЛ: ./pkgs/default.nix
+# ==============================================================================
+
+# pkgs/default.nix
+{ pkgs }:
+
+{
+  # Регистрируем наш новый пакет
+  thorium-browser = pkgs.callPackage ./thorium-browser { };
+
+  # Если в будущем появятся другие пакеты, добавляйте их сюда
+  # another-package = pkgs.callPackage ./another-package { };
+}
+
+# ==============================================================================
+# ФАЙЛ: ./pkgs/thorium-browser/default.nix
+# ==============================================================================
+
+# pkgs/thorium-browser/default.nix
+{ pkgs, ... }:
+
+# Используем стандартный сборщик Nix
+pkgs.stdenv.mkDerivation rec {
+  pname = "thorium-browser";
+  # Версия на момент написания. Можно обновить, сменив версию и хеш.
+  version = "126.0.6478.114";
+
+  # Скачиваем официальный .deb пакет
+  src = pkgs.fetchurl {
+    url = "https://github.com/Alex313031/thorium/releases/download/M${version}/thorium-browser_${version}_amd64.deb";
+    # Хеш SHA256 для проверки целостности файла
+    sha256 = "0q2f3p9j1k423z4j89j9h1m0g9f2j3h1l2g3k4j5h6g7f8d9s0a1b2c3d4e5f6g7"; # Замените на актуальный хеш
+  };
+
+  # Нам нужна утилита dpkg для распаковки .deb архива
+  nativeBuildInputs = [ pkgs.dpkg ];
+
+  # Говорим сборщику не пытаться выполнять configure, build и check
+  dontConfigure = true;
+  dontBuild = true;
+  dontCheck = true;
+
+  # Фаза установки: здесь происходит вся магия
+  installPhase = ''
+    # Создаем директорию для установки
+    mkdir -p $out
+
+    # Распаковываем .deb архив в нашу директорию $out
+    dpkg-deb -x $src $out
+
+    # .deb распаковывается в структуру /usr/...
+    # Перемещаем все из $out/usr/ в корень нашей установки $out
+    mv $out/usr/* $out/
+    rm -rf $out/usr
+
+    # Важный шаг: исправляем .desktop файл, чтобы он указывал на правильный путь
+    # внутри Nix-хранилища, а не на /usr/bin/thorium-browser
+    substituteInPlace $out/share/applications/thorium-browser.desktop \
+      --replace "/usr/bin/thorium-browser" "$out/bin/thorium-browser"
+  '';
+
+  # Мета-информация о пакете
+  meta = with pkgs.lib; {
+    description = "A fast and privacy-focused Chromium fork";
+    homepage = "https://thorium.rocks/";
+    license = licenses.bsd3; # Thorium использует лицензию BSD
+    platforms = platforms.linux;
+    maintainers = with maintainers; [ ]; # Можете добавить свое имя
+  };
+}
+
+# ==============================================================================
+# ФАЙЛ: ./flake.nix
+# ==============================================================================
+
+# flake.nix
+{
+  description = "Моя декларативная конфигурация NixOS";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    hardware.url = "github:NixOS/nixos-hardware/master";
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    plasma-manager = {
+      url = "github:nix-community/plasma-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = { self, nixpkgs, home-manager, ... }@inputs:
+    let
+      # --- НОВЫЙ РАЗДЕЛ ЗДЕСЬ! ---
+      # Импортируем нашу библиотеку и передаем ей стандартную библиотеку Nixpkgs,
+      # чтобы мы могли использовать функции из нее внутри наших собственных функций.
+      mylib = import ./lib { lib = nixpkgs.lib; };
+    in
+    {
+      # --- РАЗДЕЛ 1: КОНФИГУРАЦИИ СИСТЕМ ---
+      nixosConfigurations = {
+        shershulya = nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+
+          # Добавляем нашу библиотеку 'mylib' в specialArgs
+          specialArgs = { inherit inputs self mylib; };
+
+          modules = [
+            # Подключаем наш хост
+            ./hosts/shershulya
+
+            # Подключаем Home Manager на уровне системы,
+            # чтобы наш модуль users.nix мог им управлять.
+            home-manager.nixosModules.home-manager
+          ];
+        };
+      };
+
+      # --- РАЗДЕЛ 2: КОНФИГУРАЦИИ ПОЛЬЗОВАТЕЛЕЙ (HOME MANAGER) ---
+      # Этот блок позволяет нам управлять конфигурациями пользователей отдельно.
+      homeConfigurations = {
+        "alex@shershulya" = home-manager.lib.homeManagerConfiguration {
+          pkgs = nixpkgs.legacyPackages."x86_64-linux";
+          # Добавляем 'mylib' и сюда, чтобы использовать общие функции
+          extraSpecialArgs = { inherit inputs self mylib; };
+          modules = [ ./home/alex ];
+        };
+        "mari@shershulya" = home-manager.lib.homeManagerConfiguration {
+          pkgs = nixpkgs.legacyPackages."x86_64-linux";
+          extraSpecialArgs = { inherit inputs self mylib; };
+          modules = [ ./home/mari ];
+        };
+      };
+    };
+}
+
+# ==============================================================================
+# ФАЙЛ: ./lib/default.nix
+# ==============================================================================
+
+# lib/default.nix
+# Наша будущая библиотека кастомных вспомогательных функций.
+# Аргументы, которые мы передаем, чтобы наши функции имели к ним доступ.
+{ pkgs, lib, ... }:
+
+{
+  # Здесь пока пусто, но мы готовы к будущему!
+  # myHelpers.generateUser = user: { ... };
+}
