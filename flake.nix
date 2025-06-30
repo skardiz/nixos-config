@@ -17,26 +17,45 @@
 
   outputs = { self, nixpkgs, home-manager, ... }@inputs:
     let
-      # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
-      # Мы должны передать в нашу библиотеку ВСЕ, что ей нужно.
-      # Раньше мы передавали только 'lib'. Теперь мы передаем и 'pkgs'.
+      # Наша кастомная библиотека остается без изменений.
       mylib = import ./lib { lib = nixpkgs.lib; pkgs = nixpkgs.legacyPackages."x86_64-linux"; };
+
+      # --- ИЗМЕНЕНИЕ №1: Определяем наш оверлей ---
+      # Оверлей — это слой поверх стандартного набора пакетов Nixpkgs.
+      # Мы используем его, чтобы добавить наш кастомный пакет `dpitunnel`.
+      overlays = [
+        (final: prev: {
+          # Здесь мы говорим: "создай новый пакет 'dpitunnel',
+          # используя рецепт из файла ./pkgs/dpitunnel".
+          dpitunnel = prev.callPackage ./pkgs/dpitunnel { };
+        })
+      ];
+
+      # --- ИЗМЕНЕНИЕ №2: Создаем кастомный набор пакетов для Home Manager ---
+      # Standalone Home Manager конфигурации требуют явной передачи пакетов.
+      # Мы создаем новый набор `pkgs`, который включает наши оверлеи.
+      pkgsForHomeManager = import nixpkgs {
+        system = "x86_64-linux";
+        inherit overlays;
+        config.allowUnfree = true; # Важно сохранить эту опцию
+      };
+
     in
     {
       # --- РАЗДЕЛ 1: КОНФИГУРАЦИИ СИСТЕМ ---
       nixosConfigurations = {
         shershulya = nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
-
-          # Добавляем нашу библиотеку 'mylib' в specialArgs
           specialArgs = { inherit inputs self mylib; };
 
           modules = [
-            # Подключаем наш хост
-            ./hosts/shershulya
+            # --- ИЗМЕНЕНИЕ №3: Применяем оверлей к системе ---
+            # Мы добавляем наш оверлей в список модулей.
+            # Это самый чистый и правильный способ для NixOS.
+            { nixpkgs.overlays = overlays; }
 
-            # Подключаем Home Manager на уровне системы,
-            # чтобы наш модуль users.nix мог им управлять.
+            # Все остальные модули остаются без изменений.
+            ./hosts/shershulya
             home-manager.nixosModules.home-manager
           ];
         };
@@ -45,13 +64,16 @@
       # --- РАЗДЕЛ 2: КОНФИГУРАЦИИ ПОЛЬЗОВАТЕЛЕЙ (HOME MANAGER) ---
       homeConfigurations = {
         "alex@shershulya" = home-manager.lib.homeManagerConfiguration {
-          pkgs = nixpkgs.legacyPackages."x86_64-linux";
-          # Добавляем 'mylib' и сюда, чтобы использовать общие функции
+          # --- ИЗМЕНЕНИЕ №4: Используем наш кастомный `pkgs` ---
+          # Вместо стандартного набора пакетов мы передаем тот,
+          # который содержит наш `dpitunnel`.
+          pkgs = pkgsForHomeManager;
           extraSpecialArgs = { inherit inputs self mylib; };
           modules = [ ./home/alex ];
         };
         "mari@shershulya" = home-manager.lib.homeManagerConfiguration {
-          pkgs = nixpkgs.legacyPackages."x86_64-linux";
+          # И для второго пользователя тоже.
+          pkgs = pkgsForHomeManager;
           extraSpecialArgs = { inherit inputs self mylib; };
           modules = [ ./home/mari ];
         };
