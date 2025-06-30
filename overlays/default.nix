@@ -7,7 +7,4 @@ final: prev: {
   # будет автоматически искать ВСЕ недостающие зависимости
   # (вроде `cpp-httplib` и `openssl`) в основном наборе пакетов `prev`.
   dpitunnel = prev.callPackage ../pkgs/dpitunnel;
-
-  # Для второго пакета делаем то же самое.
-  #thorium-browser = prev.callPackage ../pkgs/thorium-browser;
 }
