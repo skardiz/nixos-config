@@ -9,10 +9,12 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    plasma-manager = {
-      url = "github:nix-community/plasma-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
+    # Мы полностью удаляем блок plasma-manager.
+    # plasma-manager = {
+    #   url = "github:nix-community/plasma-manager";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
   };
 
   outputs = { self, nixpkgs, home-manager, ... }@inputs:
@@ -25,7 +27,10 @@
           system = "x86_64-linux";
           specialArgs = { inherit inputs self mylib; };
           modules = [
-            { nixpkgs.overlays = [ (import ./overlays) ]; }
+            # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
+            # Мы полностью удаляем строку, которая импортировала оверлеи.
+            # { nixpkgs.overlays = [ (import ./overlays) ]; }
+
             ./hosts/shershulya
             home-manager.nixosModules.home-manager
           ];
@@ -34,15 +39,21 @@
 
       homeConfigurations = {
         "alex@shershulya" = home-manager.lib.homeManagerConfiguration {
-          pkgs = nixpkgs.legacyPackages."x86_64-linux".extend (import ./overlays);
+          # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
+          # Мы больше не расширяем пакеты оверлеями.
+          # Используем стандартный, чистый набор пакетов.
+          pkgs = nixpkgs.legacyPackages."x86_64-linux";
           extraSpecialArgs = { inherit inputs self mylib; };
           modules = [ ./home/alex ];
         };
         "mari@shershulya" = home-manager.lib.homeManagerConfiguration {
-          pkgs = nixpkgs.legacyPackages."x86_64-linux".extend (import ./overlays);
+          # И для второго пользователя тоже.
+          pkgs = nixpkgs.legacyPackages."x86_64-linux";
           extraSpecialArgs = { inherit inputs self mylib; };
           modules = [ ./home/mari ];
         };
       };
     };
+}
+
 }
