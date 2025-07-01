@@ -25,11 +25,7 @@
           system = "x86_64-linux";
           specialArgs = { inherit inputs self mylib; };
           modules = [
-            # --- ГЛАВНАЯ МАГИЯ! ---
-            # Мы по-прежнему указываем системе использовать нашу папку `overlays`.
-            # Но теперь внутри нее лежит один, простой и понятный файл.
             { nixpkgs.overlays = [ (import ./overlays) ]; }
-
             ./hosts/shershulya
             home-manager.nixosModules.home-manager
           ];

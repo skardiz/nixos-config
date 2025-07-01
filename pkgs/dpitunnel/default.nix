@@ -1,31 +1,42 @@
-# pkgs/dpitunnel/default.nix
-# Наш чертеж для сборки НОВОГО DPITunnel на C++.
-{ lib, stdenv, fetchFromGitHub, cmake, libnl, cpp-httplib, openssl }:
+# modules/features/dpi-tunnel.nix
+{ pkgs, ... }:
 
-stdenv.mkDerivation rec {
-  pname = "DPITunnel";
-  version = "1.0.3";
+let
+  # --- ГЛАВНАЯ МАГИЯ! ---
+  # Мы создаем локальную переменную 'dpitunnel' прямо здесь.
+  # Мы используем `pkgs.callPackage`, который гарантированно имеет
+  # доступ ко всем зависимостям, и указываем ему на наш чертеж.
+  # Относительный путь `../../pkgs/dpitunnel` важен!
+  dpitunnel = pkgs.callPackage ../../pkgs/dpitunnel {};
 
-  src = fetchFromGitHub {
-    owner = "txtsd";
-    repo = "DPITunnel";
-    rev = "v${version}";
-    hash = "sha256-11f8F/fK1i+e8V5v/w4t6X9b+p7Y9z/C6f8V9s/d7A8=";
-  };
+in
+{
+  # Создаем системный сервис.
+  systemd.services.dpitunnel = {
+    description = "DPI Tunnel Proxy Service";
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+    wantedBy = [ "multi-user.target" ];
 
-  # Указываем инструменты для сборки
-  nativeBuildInputs = [ cmake ];
+    serviceConfig = {
+      # --- ИСПОЛЬЗУЕМ НАШУ ЛОКАЛЬНУЮ СБОРКУ ---
+      # Теперь мы используем не `pkgs.dpitunnel` (которого больше нет),
+      # а нашу локальную, собранную вручную переменную `dpitunnel`.
+      ExecStart = ''
+        ${dpitunnel}/bin/dpitunnel \
+          --ca-bundle-path=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt \
+          --desync-attacks=fake,disorder_fake \
+          --split-position=2 \
+          --auto-ttl=1-4-10 \
+          --min-ttl=3 \
+          --doh \
+          --doh-server=https://dns.google/dns-query \
+          --wsize=1 \
+          --wsfactor=6
+      '';
 
-  # --- ГЛАВНОЕ ЗДЕСЬ! ---
-  # Мы явно указываем ВСЕ зависимости, которые нужны для сборки,
-  # включая 'cpp-httplib' и его зависимость 'openssl'.
-  buildInputs = [ libnl cpp-httplib openssl ];
-
-  meta = with lib; {
-    description = "A C++ proxy server that uses desync attacks to bypass DPI";
-    homepage = "https://github.com/txtsd/DPITunnel";
-    license = licenses.gpl3Only;
-    platforms = platforms.linux;
-    maintainers = [ maintainers.skardizone ];
+      Restart = "always";
+      RestartSec = "10s";
+    };
   };
 }
