@@ -9,17 +9,13 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # --- НОВЫЙ КОМПОНЕНТ! ---
-    # Мы добавляем sops-nix как зависимость нашего проекта.
+    # --- НОВЫЙ КОМПОНЕНТ ---
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  # --- ОБНОВЛЕНИЕ! ---
-  # Мы должны добавить 'sops-nix' в аргументы функции,
-  # чтобы использовать его внутри.
   outputs = { self, nixpkgs, home-manager, sops-nix, ... }@inputs:
     let
       mylib = import ./lib { lib = nixpkgs.lib; pkgs = nixpkgs.legacyPackages."x86_64-linux"; };
@@ -30,11 +26,9 @@
           system = "x86_64-linux";
           specialArgs = { inherit inputs self mylib; };
           modules = [
-            # --- НОВЫЙ МОДУЛЬ БЕЗОПАСНОСТИ! ---
-            # Мы подключаем главный модуль sops-nix к нашей системе.
+            # --- НОВЫЙ МОДУЛЬ БЕЗОПАСНОСТИ ---
             sops-nix.nixosModules.sops
 
-            # Все остальное остается без изменений.
             ./hosts/shershulya
             home-manager.nixosModules.home-manager
           ];
