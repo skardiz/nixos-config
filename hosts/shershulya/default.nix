@@ -1,6 +1,8 @@
+# hosts/shershulya/default.nix
 { config, pkgs, inputs, lib, ... }:
 
-{
+{ # <--- ОТКРЫВАЮЩАЯ СКОБКА, КОТОРОЙ НЕ БЫЛО
+
   imports = [
     ./hardware-configuration.nix
     ../_common/default.nix
@@ -39,4 +41,6 @@
       description = "Mari";
     };
   };
-}
+
+} # <--- И ЗАКРЫВАЮЩАЯ СКОБКА
+
