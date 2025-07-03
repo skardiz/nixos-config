@@ -1,7 +1,9 @@
-# hosts/shershulya/default.nix
+# ./hosts/shershulya/default.nix
 { config, pkgs, inputs, lib, ... }:
 
 {
+  # Мы больше НЕ импортируем modules/system здесь,
+  # так как это делается на уровне flake.nix
   imports = [
     ./hardware-configuration.nix
     ../../modules/roles/desktop.nix
@@ -9,7 +11,7 @@
 
   # --- НАСТРОЙКИ, УНИКАЛЬНЫЕ ДЛЯ ЭТОГО ХОСТА ---
 
-  # SOPS: Настраиваем Sops. Он уже импортирован из modules/system.
+  # SOPS: Активируем и настраиваем Sops для этого хоста
   sops = {
     age.keyFile = "/etc/sops/keys/sops.key";
     secrets.github_token.sopsFile = ../../secrets.yaml;

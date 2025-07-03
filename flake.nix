@@ -1,4 +1,4 @@
-# flake.nix
+# ./flake.nix
 {
   description = "Моя декларативная конфигурация NixOS";
 
@@ -15,11 +15,9 @@
     };
   };
 
-  # --- БОМБА БЫЛА ЗДЕСЬ! МЫ УДАЛИЛИ БЛОК nixConfig. ---
-  # Его больше не существует. Источник правды - наши модули.
-
   outputs = { self, nixpkgs, home-manager, sops-nix, ... }@inputs:
     let
+      # Импортируем нашу библиотеку, передавая ей все инпуты
       mylib = import ./lib { lib = nixpkgs.lib; pkgs = nixpkgs.legacyPackages."x86_64-linux"; };
     in
     {
@@ -28,11 +26,14 @@
           system = "x86_64-linux";
           specialArgs = { inherit inputs self mylib; };
           modules = [
-            # Импортируем наш центральный модуль для всех хостов
+            # 1. Импортируем наш центральный модуль для ВСЕХ хостов.
+            # Он подключит всё необходимое: nix.nix, sops.nix, core модули.
             ./modules/system
-            # Импортируем конфигурацию конкретного хоста
+
+            # 2. Импортируем конфигурацию КОНКРЕТНОГО хоста.
             ./hosts/shershulya
-            # Импортируем Home Manager
+
+            # 3. Импортируем Home Manager, так как он используется на этом хосте.
             home-manager.nixosModules.home-manager
           ];
         };
