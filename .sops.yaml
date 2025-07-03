@@ -1,4 +1,4 @@
 creation_rules:
   - path_regex: secrets.yaml
     age: >-
-      ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEdSZijJvvIKfQzrLwSfrhQC8pwybgWVZ1H3hPvz0Wp8 root@shershulya
+      age1s2c2yug597dtjzgws723pslzypzctglwzexvra0zmez22q96w5sqp344nf
