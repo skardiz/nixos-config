@@ -265,101 +265,32 @@ in
 # hosts/shershulya/default.nix
 { config, pkgs, inputs, lib, ... }:
 
-{ # <--- Главная открывающая скобка
-
+{
   imports = [
-    # Подключаем описание нашего железа (диски, загрузчик).
     ./hardware-configuration.nix
-
-    # Подключаем общие для всех хостов правила.
-    ../_common/default.nix
-
-    # Подключаем "роль" рабочего стола, которая собирает все нужные фичи.
     ../../modules/roles/desktop.nix
-
-    # Подключаем модули для нашего конкретного оборудования.
-    ../../modules/hardware/nvidia-pascal.nix
-    ../../modules/hardware/intel-cpu.nix
   ];
 
-  # --- ГЛАВНОЕ ИСПРАВЛЕНИЕ ДЛЯ NIX-SHELL ---
-  # Эта опция говорит NixOS: "Возьми все настройки из блока nix.settings
-  # и сделай их глобальными, записав в /etc/nix/nix.conf".
-  # Это сделает твой flake.nix единственным источником правды.
-  nix.generateNixPath = true;
+  # --- НАСТРОЙКИ, УНИКАЛЬНЫЕ ДЛЯ ЭТОГО ХОСТА ---
 
-  # --- НАДЕЖНАЯ КОНФИГУРАЦИЯ SOPS ---
+  # SOPS: Настраиваем Sops. Он уже импортирован из modules/system.
   sops = {
-    # Указываем прямой, недвусмысленный путь к нашему НОВОМУ,
-    # НАСТОЯЩЕМУ приватному ключу.
     age.keyFile = "/etc/sops/keys/sops.key";
-
-    # Определяем наш секрет.
-    secrets.github_token = {
-      sopsFile = ../../secrets.yaml;
-    };
+    secrets.github_token.sopsFile = ../../secrets.yaml;
+    secrets.vpn_private_key.sopsFile = ../../secrets.yaml;
   };
 
-  # --- ЕДИНЫЙ ИСТОЧНИК НАСТРОЕК NIX ---
-  nix.settings = {
-    # Эти настройки теперь будут применяться ко всей системе.
-    experimental-features = [ "nix-command" "flakes" ];
-    access-tokens = "github.com=${config.sops.secrets.github_token.path}";
-    extra-substituters = [ "https://nix-community.cachix.org" ];
-    extra-trusted-public-keys = [ "nix-community.cachix.org-1:mB9FSh9UfP3dPH2-jeLqIphSkeUV3ZTLb61E4gD4sIC=" ];
-  };
+  # NIX: Добавляем только ту настройку, которая зависит от sops этого хоста.
+  nix.settings.access-tokens = "github.com=${config.sops.secrets.github_token.path}";
 
-  # --- УНИКАЛЬНЫЕ НАСТРОЙКИ ХОСТА ---
+  # Уникальное имя хоста и версия системы.
   networking.hostName = "shershulya";
   system.stateVersion = "25.11";
 
-  # --- ПОЛЬЗОВАТЕЛИ ---
+  # Уникальные пользователи для этого хоста.
   my.users.accounts = {
-    alex = {
-      isMainUser = true;
-      description = "Alex";
-      extraGroups = [ "adbusers" ];
-    };
-    mari = {
-      description = "Mari";
-    };
-  };
-
-} # <--- Главная закрывающая скобка
-
-# ==============================================================================
-# ФАЙЛ: ./hosts/_common/default.nix
-# ==============================================================================
-
-# hosts/_common/default.nix
-#
-# "Конституция" для всех моих систем.
-{ pkgs, ... }:
-
-{
-  imports = [
-    # Подключаем наш "пульт управления"
-    ../../modules/core/options.nix
-    # Подключаем наш API для пользователей
-    ../../modules/core/users.nix
-
-    # Эта строка переезжает в файл конкретного хоста,
-    # так как не все машины будут десктопами.
-    # ../../modules/profiles/desktop.nix
-  ];
-
-  # --- Глобальные политики и сервисы ---
-  # Декларативно включаем все, что нам нужно, через наш собственный API
-  my = {
-    # Включаем наши глобальные политики
-    policies = {
-      allowUnfree = true;
-      enableAutoGc = true;
-      enableFlakes = true;
-    };
-
-    # Включаем наш "Базовый Пакет Коммунальных Услуг"
-    services.enableCore = true;
+    alex = { isMainUser = true; description = "Alex"; extraGroups = [ "adbusers" ]; };
+    mari = { description = "Mari"; };
   };
 }
 
@@ -858,6 +789,75 @@ in
 }
 
 # ==============================================================================
+# ФАЙЛ: ./modules/system/default.nix
+# ==============================================================================
+
+# modules/system/default.nix
+# Это центральный импорт для ВСЕХ хостов.
+{ pkgs, inputs, ... }:
+
+{
+  imports = [
+    # Фундаментальные настройки Nix
+    ./nix.nix
+    # Возможность использовать Sops
+    ./sops.nix
+    # Твои существующие core-модули
+    ../../modules/core/options.nix
+    ../../modules/core/users.nix
+  ];
+
+  # Твои глобальные политики
+  my = {
+    policies = {
+      allowUnfree = true;
+      enableAutoGc = true;
+      enableFlakes = true;
+    };
+    services.enableCore = true;
+  };
+}
+
+# ==============================================================================
+# ФАЙЛ: ./modules/system/nix.nix
+# ==============================================================================
+
+# modules/system/nix.nix
+{ pkgs, ... }:
+
+{
+  # Эта опция — НАСТОЯЩАЯ. Она говорит NixOS: "Возьми все настройки из
+  # блока nix.settings и сделай их глобальными, записав в /etc/nix/nix.conf".
+  nix.extraOptions = ''
+    experimental-features = nix-command flakes
+  '';
+
+  # Здесь мы определяем сами настройки.
+  nix.settings = {
+    # Эта настройка будет добавлена в nix.conf через extraOptions,
+    # но мы оставляем ее здесь для консистентности.
+    experimental-features = [ "nix-command" "flakes" ];
+
+    # Эти настройки общие для всех хостов.
+    extra-substituters = [ "https://nix-community.cachix.org" ];
+    extra-trusted-public-keys = [ "nix-community.cachix.org-1:mB9FSh9UfP3dPH2-jeLqIphSkeUV3ZTLb61E4gD4sIC=" ];
+  };
+}
+
+# ==============================================================================
+# ФАЙЛ: ./modules/system/sops.nix
+# ==============================================================================
+
+# modules/system/sops.nix
+{ inputs, ... }:
+
+{
+  imports = [
+    inputs.sops-nix.nixosModules.sops
+  ];
+}
+
+# ==============================================================================
 # ФАЙЛ: ./lib/default.nix
 # ==============================================================================
 
@@ -937,12 +937,14 @@ in
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # --- НОВЫЙ КОМПОНЕНТ ---
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
+
+  # --- БОМБА БЫЛА ЗДЕСЬ! МЫ УДАЛИЛИ БЛОК nixConfig. ---
+  # Его больше не существует. Источник правды - наши модули.
 
   outputs = { self, nixpkgs, home-manager, sops-nix, ... }@inputs:
     let
@@ -954,15 +956,15 @@ in
           system = "x86_64-linux";
           specialArgs = { inherit inputs self mylib; };
           modules = [
-            # --- НОВЫЙ МОДУЛЬ БЕЗОПАСНОСТИ ---
-            sops-nix.nixosModules.sops
-
+            # Импортируем наш центральный модуль для всех хостов
+            ./modules/system
+            # Импортируем конфигурацию конкретного хоста
             ./hosts/shershulya
+            # Импортируем Home Manager
             home-manager.nixosModules.home-manager
           ];
         };
       };
-
       homeConfigurations = {
         "alex@shershulya" = home-manager.lib.homeManagerConfiguration {
           pkgs = nixpkgs.legacyPackages."x86_64-linux";
