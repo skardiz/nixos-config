@@ -19,8 +19,9 @@
     # sops-nix сам найдет нужный ключ в /etc/ssh.
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
 
-    # Определяем наш секрет.
-    secrets.github_token = {}; # Настройки по умолчанию нам подходят
+    # Определяем наш секрет. Пустые скобки означают "использовать
+    # настройки по умолчанию", которые нам подходят (владелец - root).
+    secrets.github_token = {};
   };
 
   # Настройки Nix.
@@ -28,6 +29,7 @@
     experimental-features = [ "nix-command" "flakes" ];
     access-tokens = "github.com=${config.sops.secrets.github_token.path}";
     extra-substituters = [ "https://nix-community.cachix.org" ];
+    # Используем правильный ключ с МИНУСОМ, а не подчеркиванием.
     extra-trusted-public-keys = [ "nix-community.cachix.org-1:mB9FSh9UfP3dPH2-jeLqIphSkeUV3ZTLb61E4gD4sIC=" ];
   };
 
