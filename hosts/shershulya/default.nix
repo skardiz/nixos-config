@@ -20,13 +20,10 @@
     age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
 
     # Определяем наш секрет.
-    secrets.github_token = {
-      # Владелец - root, так как Nix-демон работает от его имени.
-      owner = config.users.users.root.name;
-    };
+    secrets.github_token = {}; # Настройки по умолчанию нам подходят
   };
 
-  # Настройки Nix с ИСПРАВЛЕННЫМ ключом.
+  # Настройки Nix.
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
     access-tokens = "github.com=${config.sops.secrets.github_token.path}";

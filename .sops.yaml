@@ -1,4 +1,6 @@
 creation_rules:
   - path_regex: secrets.yaml
+    # Мы указываем наш ПУБЛИЧНЫЙ ключ SSH как получателя.
+    # sops/age умеют с этим работать напрямую.
     age: >-
       ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEdSZijJvvIKfQzrLwSfrhQC8pwybgWVZ1H3hPvz0Wp8 root@shershulya
