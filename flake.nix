@@ -9,7 +9,6 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # --- НОВЫЙ КОМПОНЕНТ ---
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -26,15 +25,16 @@
           system = "x86_64-linux";
           specialArgs = { inherit inputs self mylib; };
           modules = [
-            # --- НОВЫЙ МОДУЛЬ БЕЗОПАСНОСТИ ---
-            sops-nix.nixosModules.sops
-
+            # --- ГЛАВНОЕ ИЗМЕНЕНИЕ ---
+            # 1. Импортируем наш новый центральный модуль для всех хостов
+            ./modules/system
+            # 2. Импортируем конфигурацию конкретного хоста
             ./hosts/shershulya
+            # 3. Импортируем Home Manager, так как он тоже общий
             home-manager.nixosModules.home-manager
           ];
         };
       };
-
       homeConfigurations = {
         "alex@shershulya" = home-manager.lib.homeManagerConfiguration {
           pkgs = nixpkgs.legacyPackages."x86_64-linux";

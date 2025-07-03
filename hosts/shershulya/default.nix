@@ -1,64 +1,31 @@
 # hosts/shershulya/default.nix
 { config, pkgs, inputs, lib, ... }:
 
-{ # <--- Главная открывающая скобка
-
+{
   imports = [
-    # Подключаем описание нашего железа (диски, загрузчик).
     ./hardware-configuration.nix
-
-    # Подключаем общие для всех хостов правила.
-    ../_common/default.nix
-
-    # Подключаем "роль" рабочего стола, которая собирает все нужные фичи.
     ../../modules/roles/desktop.nix
-
-    # Подключаем модули для нашего конкретного оборудования.
-    ../../modules/hardware/nvidia-pascal.nix
-    ../../modules/hardware/intel-cpu.nix
   ];
 
-  # --- ГЛАВНОЕ ИСПРАВЛЕНИЕ ДЛЯ NIX-SHELL ---
-  # Эта опция говорит NixOS: "Возьми все настройки из блока nix.settings
-  # и сделай их глобальными, записав в /etc/nix/nix.conf".
-  # Это сделает твой flake.nix единственным источником правды.
-  nix.generateNixPath = true;
+  # --- НАСТРОЙКИ, УНИКАЛЬНЫЕ ДЛЯ ЭТОГО ХОСТА ---
 
-  # --- НАДЕЖНАЯ КОНФИГУРАЦИЯ SOPS ---
+  # SOPS: Настраиваем Sops. Он уже импортирован из modules/system.
   sops = {
-    # Указываем прямой, недвусмысленный путь к нашему НОВОМУ,
-    # НАСТОЯЩЕМУ приватному ключу.
     age.keyFile = "/etc/sops/keys/sops.key";
-
-    # Определяем наш секрет.
-    secrets.github_token = {
-      sopsFile = ../../secrets.yaml;
-    };
+    secrets.github_token.sopsFile = ../../secrets.yaml;
+    secrets.vpn_private_key.sopsFile = ../../secrets.yaml;
   };
 
-  # --- ЕДИНЫЙ ИСТОЧНИК НАСТРОЕК NIX ---
-  nix.settings = {
-    # Эти настройки теперь будут применяться ко всей системе.
-    experimental-features = [ "nix-command" "flakes" ];
-    access-tokens = "github.com=${config.sops.secrets.github_token.path}";
-    extra-substituters = [ "https://nix-community.cachix.org" ];
-    extra-trusted-public-keys = [ "nix-community.cachix.org-1:mB9FSh9UfP3dPH2-jeLqIphSkeUV3ZTLb61E4gD4sIC=" ];
-  };
+  # NIX: Добавляем только ту настройку, которая зависит от sops этого хоста.
+  nix.settings.access-tokens = "github.com=${config.sops.secrets.github_token.path}";
 
-  # --- УНИКАЛЬНЫЕ НАСТРОЙКИ ХОСТА ---
+  # Уникальное имя хоста и версия системы.
   networking.hostName = "shershulya";
   system.stateVersion = "25.11";
 
-  # --- ПОЛЬЗОВАТЕЛИ ---
+  # Уникальные пользователи для этого хоста.
   my.users.accounts = {
-    alex = {
-      isMainUser = true;
-      description = "Alex";
-      extraGroups = [ "adbusers" ];
-    };
-    mari = {
-      description = "Mari";
-    };
+    alex = { isMainUser = true; description = "Alex"; extraGroups = [ "adbusers" ]; };
+    mari = { description = "Mari"; };
   };
-
-} # <--- Главная закрывающая скобка
+}
