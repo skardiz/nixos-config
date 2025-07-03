@@ -15,6 +15,9 @@
     };
   };
 
+  # --- БОМБА БЫЛА ЗДЕСЬ! МЫ УДАЛИЛИ БЛОК nixConfig. ---
+  # Его больше не существует. Источник правды - наши модули.
+
   outputs = { self, nixpkgs, home-manager, sops-nix, ... }@inputs:
     let
       mylib = import ./lib { lib = nixpkgs.lib; pkgs = nixpkgs.legacyPackages."x86_64-linux"; };
@@ -25,12 +28,11 @@
           system = "x86_64-linux";
           specialArgs = { inherit inputs self mylib; };
           modules = [
-            # --- ГЛАВНОЕ ИЗМЕНЕНИЕ ---
-            # 1. Импортируем наш новый центральный модуль для всех хостов
+            # Импортируем наш центральный модуль для всех хостов
             ./modules/system
-            # 2. Импортируем конфигурацию конкретного хоста
+            # Импортируем конфигурацию конкретного хоста
             ./hosts/shershulya
-            # 3. Импортируем Home Manager, так как он тоже общий
+            # Импортируем Home Manager
             home-manager.nixosModules.home-manager
           ];
         };
