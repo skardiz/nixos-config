@@ -20,7 +20,7 @@
   environment.etc."amnezia/amneziawg/awg0.conf" = {
     text = ''
       [Interface]
-      PrivateKey = 4LSnIheBiDOwqM/KAmrYa1vyDUSVfo41bRLHlaAM8G8=
+      PrivateKey = ${vpnKey}
       S1 = 0
       S2 = 0
       Jc = 120
