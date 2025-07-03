@@ -8,20 +8,21 @@
     ../../modules/roles/desktop.nix
     ../../modules/hardware/nvidia-pascal.nix
     ../../modules/hardware/intel-cpu.nix
-    # --- УДАЛЯЕМ ССЫЛКУ НА СЛОМАННЫЙ СЕРВИС ---
-    # ../../modules/features/sops-service.nix
   ];
 
   # --- ФИНАЛЬНОЕ, КЛАССИЧЕСКОЕ РЕШЕНИЕ ---
   # Мы создаем один, правильный блок для sops.
   sops = {
-    # 1. Мы явно указываем путь к нашему ПРИВАТНОМУ ключу.
-    #    Это удовлетворяет требование "set sops.age.keyFile".
+    # 1. Мы явно указываем путь к файлу с секретами по умолчанию.
+    #    Это исправляет ошибку 'sops.defaultSopsFile was accessed but has no value defined'.
+    defaultSopsFile = ../../secrets.yaml;
+
+    # 2. Мы явно указываем путь к нашему ПРИВАТНОМУ ключу.
     age.keyFile = "/etc/ssh/ssh_host_ed25519_key";
 
-    # 2. Мы определяем наш секрет.
+    # 3. Мы определяем наш секрет.
     secrets.github_token = {
-      # 3. Мы указываем, что владелец расшифрованного файла - root,
+      # 4. Мы указываем, что владелец расшифрованного файла - root,
       #    так как системные службы (вроде nix-daemon) работают от его имени.
       owner = config.users.users.root.name;
     };
