@@ -1,21 +1,23 @@
 # modules/system/nix.nix
+# Общие настройки для Nix, которые будут применяться ко всем хостам.
 { pkgs, ... }:
 
 {
-  # Эта опция — НАСТОЯЩАЯ. Она говорит NixOS: "Возьми все настройки из
-  # блока nix.settings и сделай их глобальными, записав в /etc/nix/nix.conf".
+  # Эта опция говорит NixOS: "Возьми все настройки из блока nix.settings
+  # и сделай их глобальными, записав в /etc/nix/nix.conf".
   nix.extraOptions = ''
     experimental-features = nix-command flakes
   '';
 
   # Здесь мы определяем сами настройки.
   nix.settings = {
-    # Эта настройка будет добавлена в nix.conf через extraOptions,
-    # но мы оставляем ее здесь для консистентности.
     experimental-features = [ "nix-command" "flakes" ];
-
-    # Эти настройки общие для всех хостов.
     extra-substituters = [ "https://nix-community.cachix.org" ];
-    extra-trusted-public-keys = [ "nix-community.cachix.org-1:mB9FSh9UfP3dPH2-jeLqIphSkeUV3ZTLb61E4gD4sIC=" ];
+
+    # --- ВОТ ОН, НАШ ПЕРВОРОДНЫЙ ГРЕХ. ИСПРАВЛЕН. ---
+    extra-trusted-public-keys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+    ];
   };
 }
