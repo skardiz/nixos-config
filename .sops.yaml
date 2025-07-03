@@ -1,7 +1,4 @@
-# Этот файл говорит sops, какой ключ использовать для шифрования.
 creation_rules:
   - path_regex: secrets.yaml
-    # Вставьте сюда публичный ключ вашего ХОСТА из Шага 2
     age: >-
       ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEdSZijJvvIKfQzrLwSfrhQC8pwybgWVZ1H3hPvz0Wp8 root@shershulya
-
