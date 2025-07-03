@@ -9,15 +9,18 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
-    # Мы полностью удаляем блок plasma-manager.
-    # plasma-manager = {
-    #   url = "github:nix-community/plasma-manager";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
+    # --- НОВЫЙ КОМПОНЕНТ! ---
+    # Мы добавляем sops-nix как зависимость нашего проекта.
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, ... }@inputs:
+  # --- ОБНОВЛЕНИЕ! ---
+  # Мы должны добавить 'sops-nix' в аргументы функции,
+  # чтобы использовать его внутри.
+  outputs = { self, nixpkgs, home-manager, sops-nix, ... }@inputs:
     let
       mylib = import ./lib { lib = nixpkgs.lib; pkgs = nixpkgs.legacyPackages."x86_64-linux"; };
     in
@@ -27,10 +30,11 @@
           system = "x86_64-linux";
           specialArgs = { inherit inputs self mylib; };
           modules = [
-            # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
-            # Мы полностью удаляем строку, которая импортировала оверлеи.
-            # { nixpkgs.overlays = [ (import ./overlays) ]; }
+            # --- НОВЫЙ МОДУЛЬ БЕЗОПАСНОСТИ! ---
+            # Мы подключаем главный модуль sops-nix к нашей системе.
+            sops-nix.nixosModules.sops
 
+            # Все остальное остается без изменений.
             ./hosts/shershulya
             home-manager.nixosModules.home-manager
           ];
@@ -39,15 +43,11 @@
 
       homeConfigurations = {
         "alex@shershulya" = home-manager.lib.homeManagerConfiguration {
-          # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
-          # Мы больше не расширяем пакеты оверлеями.
-          # Используем стандартный, чистый набор пакетов.
           pkgs = nixpkgs.legacyPackages."x86_64-linux";
           extraSpecialArgs = { inherit inputs self mylib; };
           modules = [ ./home/alex ];
         };
         "mari@shershulya" = home-manager.lib.homeManagerConfiguration {
-          # И для второго пользователя тоже.
           pkgs = nixpkgs.legacyPackages."x86_64-linux";
           extraSpecialArgs = { inherit inputs self mylib; };
           modules = [ ./home/mari ];
