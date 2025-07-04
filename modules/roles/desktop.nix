@@ -10,7 +10,8 @@
     # Подключаем "кирпичики"-фичи
     ../features/desktop.nix
     ../features/gaming.nix
-    #../features/android.nix
+    ../features/android.nix
+    ../features/docker.nix
   ];
 
   # Определяем стандарт загрузки для всех наших десктопов
