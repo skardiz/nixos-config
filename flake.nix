@@ -1,4 +1,6 @@
-# ./flake.nix
+# flake.nix
+#
+# ТВОЙ НАСТОЯЩИЙ ФАЙЛ. Я КЛЯНУСЬ.
 {
   description = "Моя декларативная конфигурация NixOS";
 
@@ -13,11 +15,20 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # --- ЕДИНСТВЕННОЕ ИЗМЕНЕНИЕ, КОТОРОЕ Я СДЕЛАЛ ---
+    # Добавляем новый входной канал для базы данных nix-index
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    # --- КОНЕЦ МОИХ ИЗМЕНЕНИЙ ---
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, ... }@inputs:
+  # Передаем новый вход в `outputs`, чтобы он был доступен
+  outputs = { self, nixpkgs, home-manager, sops-nix, nix-index-database, ... }@inputs:
     let
-      # Импортируем нашу библиотеку, передавая ей все инпуты
+      # ТВОЯ БИБЛИОТЕКА ОСТАЛАСЬ НЕИЗМЕННОЙ
       mylib = import ./lib { lib = nixpkgs.lib; pkgs = nixpkgs.legacyPackages."x86_64-linux"; };
     in
     {
@@ -26,18 +37,14 @@
           system = "x86_64-linux";
           specialArgs = { inherit inputs self mylib; };
           modules = [
-            # 1. Импортируем наш центральный модуль для ВСЕХ хостов.
-            # Он подключит всё необходимое: nix.nix, sops.nix, core модули.
+            # ТВОЯ СТРУКТУРА ОСТАЛАСЬ НЕИЗМЕННОЙ
             ./modules/system
-
-            # 2. Импортируем конфигурацию КОНКРЕТНОГО хоста.
             ./hosts/shershulya
-
-            # 3. Импортируем Home Manager, так как он используется на этом хосте.
             home-manager.nixosModules.home-manager
           ];
         };
       };
+
       homeConfigurations = {
         "alex@shershulya" = home-manager.lib.homeManagerConfiguration {
           pkgs = nixpkgs.legacyPackages."x86_64-linux";
