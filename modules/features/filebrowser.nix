@@ -1,29 +1,27 @@
 # modules/features/filebrowser.nix
 #
-# Здесь мы отменяем указ Лже-Императора.
+# Здесь мы следуем истинному, каноническому пути.
 { pkgs, ... }:
 
 {
-  # Эта часть правильная. Она создает папку для состояния.
-  systemd.tmpfiles.rules = [
-    "d /var/lib/filebrowser 0755 root root -"
-    "d /run/filebrowser 0755 root root -"
-  ];
+  # --- Шаг 1: Мы убираем ересь о 'tmpfiles.d' ---
+  # systemd.tmpfiles.rules = [ ... ];
 
+  # --- Шаг 2: Мы объявляем суверенную территорию ---
+  # Мы создаем именованный том, которым будет управлять сам Podman.
+  virtualisation.oci-containers.volumes."filebrowser-data" = {};
+
+  # --- Шаг 3: Мы даем Посольству доступ к этой территории ---
   virtualisation.oci-containers.containers.filebrowser = {
     image = "filebrowser/filebrowser:latest";
     ports = [ "8088:8080" ];
     volumes = [
       "/home/alex/Загрузки:/srv"
-      "/var/lib/filebrowser:/config"
-      "/var/lib/filebrowser:/database"
+      # Мы говорим: "Соедини наш новый том 'filebrowser-data'
+      # с внутренними папками контейнера".
+      "filebrowser-data:/config"
+      "filebrowser-data:/database"
     ];
-
-    # --- ВОТ ОНО, ИСТИННОЕ ЛЕКАРСТВО ---
-    # Мы просто указываем порт. Больше ничего не нужно.
-    # --no-healthcheck было моей ошибкой.
-    cmd = [
-      "--port=8080"
-    ];
+    cmd = [ "--port=8080" ];
   };
 }
