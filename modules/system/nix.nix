@@ -1,8 +1,10 @@
 # modules/system/nix.nix
-# Общие настройки для Nix, которые будут применяться ко всем хостам.
+# Общие настройки для Nix, которые будут применяться ко всем хостам,
+# включая стабилизацию сети.
 { pkgs, ... }:
 
 {
+  # --- СТАРЫЕ, ПРАВИЛЬНЫЕ НАСТРОЙКИ NIX ---
   # Эта опция говорит NixOS: "Возьми все настройки из блока nix.settings
   # и сделай их глобальными, записав в /etc/nix/nix.conf".
   nix.extraOptions = ''
@@ -16,11 +18,21 @@
       "https://cache.nixos.org"
       "https://nix-community.cachix.org"
     ];
-
     # --- ВОТ ОН, ПРАВИЛЬНЫЙ КЛЮЧ, КОТОРЫЙ МЫ ВЫСТРАДАЛИ ---
     extra-trusted-public-keys = [
       "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
     ];
   };
+
+  # --- НОВЫЙ БЛОК ДЛЯ СТАБИЛИЗАЦИИ СЕТИ ---
+  # Эта настройка говорит NetworkManager: "Независимо от того, что тебе
+  # скажет роутер по DHCP, всегда используй вот эти надежные DNS-серверы".
+  # Это стабилизирует DNS-разрешение во время пересборки.
+  networking.networkmanager.dns = "default";
+  networking.nameservers = [
+    "1.1.1.1"  # Cloudflare DNS
+    "8.8.8.8"  # Google DNS
+    "9.9.9.9"  # Quad9 DNS (еще один для надежности)
+  ];
 }
