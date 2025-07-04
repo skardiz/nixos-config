@@ -1,6 +1,6 @@
 # modules/features/filebrowser.nix
 #
-# Здесь мы исправляем ошибку самозванца.
+# Здесь мы изгоняем последнего призрака.
 { pkgs, ... }:
 
 {
@@ -11,16 +11,17 @@
 
   virtualisation.oci-containers.containers.filebrowser = {
     image = "filebrowser/filebrowser:latest";
-    ports = [ "8088:8080" ]; # Это было правильное решение
+    ports = [ "8088:8080" ];
     volumes = [
       "/home/alex/Загрузки:/srv"
       "/var/lib/filebrowser:/config"
       "/var/lib/filebrowser:/database"
     ];
-
-    # --- ВОТ ОНО, ИСТИННОЕ СЛОВО ---
-    # Не 'command', а 'cmd'. Это - аргументы, которые передаются
-    # после точки входа (entrypoint) контейнера.
     cmd = [ "--port=8080" ];
+
+    # --- ИМПЕРАТОРСКИЙ УКАЗ: ИЗГНАТЬ ПРИЗРАКА! ---
+    # Мы явно отключаем автоматическую проверку здоровья.
+    # Нам не нужна паникующая медсестра.
+    healthcheck.enable = false;
   };
 }
