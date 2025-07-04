@@ -3,10 +3,6 @@
 { pkgs, lib, ... }:
 
 {
-  # --- ИСТИННОЕ ЗАКЛИНАНИЕ ДЛЯ ОТКЛЮЧЕНИЯ IPV6 ---
-  # Это канонический, документированный способ сказать всей системе
-  # "прекратить использовать IPv6".
-  networking.enableIPv6 = false;
 
   # --- ПРИКАЗЫ АРХИТЕКТОРУ-ДЕКОРАТОРУ (ОСТАЮТСЯ В СИЛЕ) ---
   nix.extraOptions = ''
@@ -25,12 +21,4 @@
     ];
   };
 
-  # --- ПРИКАЗ ГЕНЕРАЛУ СЕТИ (ОСТАЮТСЯ В СИЛЕ) ---
-  # Эти настройки все еще полезны для стабильности DNS.
-  networking.networkmanager.dns = lib.mkForce "default";
-  networking.nameservers = lib.mkForce [
-    "1.1.1.1"  # Cloudflare DNS
-    "8.8.8.8"  # Google DNS
-    "9.9.9.9"  # Quad9 DNS
-  ];
 }
