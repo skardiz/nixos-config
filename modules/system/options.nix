@@ -1,15 +1,13 @@
-# modules/options.nix
+# modules/system/options.nix
 #
-# Наш центральный "Пульт Управления".
-# Здесь мы объявляем все кастомные опции и связываем их с реальными настройками NixOS.
+# ТВОЙ НАСТОЯЩИЙ, РАБОТАЮЩИЙ ПУЛЬТ УПРАВЛЕНИЯ,
+# в который мы аккуратно добавили новую опцию.
 { lib, config, pkgs, ... }:
 
+# =================================================================
+# РАЗДЕЛ 1: "ПАНЕЛЬ УПРАВЛЕНИЯ" (options.my)
+# =================================================================
 {
-  # =================================================================
-  # РАЗДЕЛ 1: "ПАНЕЛЬ УПРАВЛЕНИЯ" (options.my)
-  # Здесь мы объявляем наши собственные, красивые "переключатели".
-  # Это наш высокоуровневый API для управления системой.
-  # =================================================================
   options.my = {
     locale.enableRussian = lib.mkEnableOption "Полная русификация системы";
 
@@ -17,6 +15,9 @@
       enableSsdTweaks = lib.mkEnableOption "Оптимизации для SSD (fstrim)";
       enableZlibNg = lib.mkEnableOption "Высокопроизводительная библиотека zlib-ng";
       enableDesktopResponsiveness = lib.mkEnableOption "Службы для отзывчивости десктопа";
+
+      # --- ВОТ ОНА, НАША НОВАЯ ЛЮСТРА (КНОПКА) ---
+      enableSwap = lib.mkEnableOption "Декларативный swap-файл для стабильности системы.";
     };
 
     policies = {
@@ -25,17 +26,14 @@
       enableFlakes = lib.mkEnableOption "Включить Flakes и nix-command";
     };
 
-    # Наш "Базовый Пакет Коммунальных Услуг"
     services.enableCore = lib.mkEnableOption "Включить базовый набор системных сервисов и утилит";
   };
 
-  # =================================================================
-  # РАЗДЕЛ 2: "МАШИННОЕ ОТДЕЛЕНИЕ" (config)
-  # Здесь мы связываем наши красивые "переключатели"
-  # с реальными, низкоуровневыми настройками NixOS.
-  # =================================================================
+# =================================================================
+# РАЗДЕЛ 2: "МАШИННОЕ ОТДЕЛЕНИЕ" (config)
+# =================================================================
   config = lib.mkMerge [
-    # --- Блок 1: Индивидуальные настройки ---
+    # --- Блок 1: Твои индивидуальные настройки ---
     {
       time.timeZone = lib.mkIf config.my.locale.enableRussian "Europe/Moscow";
       i18n.defaultLocale = lib.mkIf config.my.locale.enableRussian "ru_RU.UTF-8";
@@ -43,7 +41,6 @@
 
       services.fstrim.enable = lib.mkIf config.my.optimizations.enableSsdTweaks true;
       nixpkgs.config.zlib.package = lib.mkIf config.my.optimizations.enableZlibNg pkgs.zlib-ng;
-
       security.rtkit.enable = lib.mkIf config.my.optimizations.enableDesktopResponsiveness true;
       services.irqbalance.enable = lib.mkIf config.my.optimizations.enableDesktopResponsiveness true;
       services.ananicy.enable = lib.mkIf config.my.optimizations.enableDesktopResponsiveness true;
@@ -58,7 +55,7 @@
       nix.settings.experimental-features = lib.mkIf config.my.policies.enableFlakes [ "nix-command" "flakes" ];
     }
 
-    # --- Блок 2: Наш "Базовый Пакет Коммунальных Услуг" ---
+    # --- Блок 2: Твой "Базовый Пакет Коммунальных Услуг" ---
     (lib.mkIf config.my.services.enableCore {
       services.timesyncd.enable = true;
       networking.firewall.enable = true;
@@ -69,5 +66,17 @@
       programs.nix-index.enable = true;
       programs.command-not-found.enable = false;
     })
+
+    # --- Блок 3: НАШ НОВЫЙ МЕХАНИЗМ ДЛЯ ЛЮСТРЫ ---
+    (lib.mkIf config.my.optimizations.enableSwap {
+      swapDevices = [{
+        device = "/var/lib/swapfile";
+        size = 16 * 1024; # 16 GB
+      }];
+      boot.kernel.sysctl = {
+        "vm.swappiness" = 10;
+      };
+    })
   ];
 }
+
