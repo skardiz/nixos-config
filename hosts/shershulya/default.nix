@@ -7,6 +7,7 @@
   imports = [
     ./hardware-configuration.nix
     ../../modules/roles/desktop.nix
+    ../../modules/roles/developer.nix
     # --- ВОЗВРАЩАЕМ УКРАДЕННОЕ ---
     ../../modules/hardware/nvidia-pascal.nix
     ../../modules/hardware/intel-cpu.nix
