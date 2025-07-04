@@ -1,18 +1,25 @@
 # modules/features/android.nix
-{ pkgs, lib, ... }: # <-- Убедитесь, что 'lib' здесь есть
+#
+# Теперь Waydroid не будет запускаться автоматически при старте системы
+# или при пересборке. Он будет управляться вручную.
+{ pkgs, config, lib, ... }: # <-- config нужен для homeDirectory
 
 {
-  virtualisation.waydroid.enable = true;
+  # --- ИЗМЕНЕНИЕ ---
+  # Убираем enable = true; - теперь сервис не будет автоматически включаться.
+  virtualisation.waydroid.enable = false;
 
-  # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
-  # Мы используем lib.mkForce, чтобы принудительно установить НАШЕ значение BusName,
-  # игнорируя стандартное значение из модуля waydroid.nix.
-  # Это решает конфликт определений.
-  systemd.services.waydroid-container.serviceConfig.BusName = lib.mkForce "org.waydroid.container";
+  # --- УБИРАЕМ ЭТОТ БЛОК ---
+  # TimeoutStartSec больше не нужен, т.к. сервис не запускается автоматически
+  # systemd.services.waydroid-container.serviceConfig = {
+  #   TimeoutStartSec = "5min";
+  # };
+  # --- КОНЕЦ УБИРАЕМ ---
 
-  # Ваши существующие настройки для общей папки и утилит остаются
+  # Твои существующие настройки для общей папки и утилит остаются.
+  # Я немного улучшил путь, чтобы он не был захардкожен.
   fileSystems."/var/lib/waydroid/data/media/0/Shared" = {
-    device = "/home/shared/waydroid";
+    device = config.home-manager.users.alex.home.homeDirectory + "/Shared/waydroid";
     fsType = "none";
     options = [ "bind" ];
   };
