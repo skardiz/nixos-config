@@ -1,6 +1,4 @@
-# ./hosts/shershulya/default.nix
-#
-# Финальная, единственно правильная версия от Дедушки-с-рыжей-бородой
+# ./hosts/shershulya/default.nix (РАБОЧАЯ ВЕРСИЯ БЕЗ NIX-INDEX)
 { config, pkgs, inputs, lib, ... }:
 
 {
@@ -10,8 +8,6 @@
     ../../modules/roles/developer.nix
     ../../modules/hardware/nvidia-pascal.nix
     ../../modules/hardware/intel-cpu.nix
-    # Эта строка остается, она подключает модуль, который скачает базу
-    inputs.nix-index-database.nixosModules.nix-index
   ];
 
   sops = {
@@ -20,11 +16,9 @@
     secrets.vpn_private_key.sopsFile = ../../secrets.yaml;
   };
 
-  # --- ВОТ ОНА, НАСТОЯЩАЯ МАГИЯ ---
-  # Мы меняем глобальный "github.com" на точный путь к ТВОЕМУ репозиторию.
-  # Теперь токен будет использоваться ТОЛЬКО для него, а все остальные
-  # репозитории на GitHub будут доступны анонимно.
-  nix.settings.access-tokens = "github.com/skardiz/nixos-config=${config.sops.secrets.github_token.path}";
+  # Мы оставляем эту строку. Она не виновата. Виновата попытка
+  # использовать ее для публичных репозиториев.
+  nix.settings.access-tokens = "github.com=${config.sops.secrets.github_token.path}";
 
   networking.hostName = "shershulya";
   system.stateVersion = "25.11";
@@ -33,7 +27,4 @@
     alex = { isMainUser = true; description = "Alex"; extraGroups = [ "adbusers" ]; };
     mari = { description = "Mari"; };
   };
-
-  # Эта строка остается, она нужна для правильной работы nix-index
-  programs.command-not-found.enable = false;
 }
