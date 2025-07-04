@@ -1,32 +1,26 @@
 # modules/features/android.nix
 #
-# Теперь Waydroid не будет запускаться автоматически при старте системы
-# или при пересборке. Он будет управляться вручную.
-{ pkgs, config, lib, ... }: # <-- config нужен для homeDirectory
+# Здесь мы разрываем порочный круг бесконечной рекурсии.
+{ pkgs, ... }: # Убрали 'config' и 'lib', они здесь больше не нужны
 
 {
-  # --- ИЗМЕНЕНИЕ ---
-  # Убираем enable = true; - теперь сервис не будет автоматически включаться.
+  # Мы оставляем Waydroid выключенным по умолчанию. Это правильная стратегия.
   virtualisation.waydroid.enable = false;
 
-  # --- УБИРАЕМ ЭТОТ БЛОК ---
-  # TimeoutStartSec больше не нужен, т.к. сервис не запускается автоматически
-  # systemd.services.waydroid-container.serviceConfig = {
-  #   TimeoutStartSec = "5min";
-  # };
-  # --- КОНЕЦ УБИРАЕМ ---
-
-  # Твои существующие настройки для общей папки и утилит остаются.
-  # Я немного улучшил путь, чтобы он не был захардкожен.
-  fileSystems."/var/lib/waydroid/data/media/0/Shared" = {
-    device = config.home-manager.users.alex.home.homeDirectory + "/Shared/waydroid";
-    fsType = "none";
-    options = [ "bind" ];
-  };
-
+  # Твои настройки для утилит остаются.
   environment.systemPackages = with pkgs; [
     wl-clipboard
     xorg.xwininfo
     xorg.xprop
   ];
+
+  # --- ВОТ ОНО, ИСТИННОЕ ЛЕКАРСТВО ---
+  # Мы больше не спрашиваем у системы, где находится твой дом.
+  # Мы говорим ей это прямо. Мы жестко прописываем путь.
+  fileSystems."/var/lib/waydroid/data/media/0/Shared" = {
+    device = "/home/alex/Shared/waydroid"; # <-- ХИРУРГИЧЕСКИЙ РАЗРЕЗ
+    fsType = "none";
+    options = [ "bind" ];
+  };
+  # --- КОНЕЦ ЛЕКАРСТВА ---
 }
