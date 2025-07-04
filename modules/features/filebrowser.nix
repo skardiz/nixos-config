@@ -1,25 +1,21 @@
 # modules/features/filebrowser.nix
 #
-# Здесь мы изгоняем демона "Permission Denied" раз и навсегда.
+# Здесь мы открываем ворота Ада, чтобы изгнать одного-единственного демона.
 { pkgs, ... }:
 
 {
-  # --- Шаг 1: Создаем официальную должность "Казначея" ---
-  # Мы создаем системного пользователя и группу с именем 'filebrowser'.
-  users.users.filebrowser = {
-    isSystemUser = true;
-    group = "filebrowser";
-  };
-  users.groups.filebrowser = {};
+  # --- Шаг 1: Мы убираем ересь о создании пользователя ---
+  # users.users.filebrowser = ...
+  # users.groups.filebrowser = {};
 
-  # --- Шаг 2: Отдаем казну Казначею ---
-  # Теперь мы создаем директорию и сразу говорим, что она
-  # принадлежит нашему новому пользователю 'filebrowser'.
+  # --- Шаг 2: Мы открываем ворота казны НАСТЕЖЬ ---
+  # Права 0777 (rwxrwxrwx) означают, что ЛЮБОЙ пользователь может
+  # делать в этой папке ВСЕ, ЧТО УГОДНО.
   systemd.tmpfiles.rules = [
-    "d /var/lib/filebrowser 0755 filebrowser filebrowser -"
+    "d /var/lib/filebrowser 0777 root root -"
   ];
 
-  # --- Шаг 3: Назначаем Казначея на работу ---
+  # --- Шаг 3: Мы приказываем запускать процесс без указания еретического имени ---
   virtualisation.oci-containers.containers.filebrowser = {
     image = "filebrowser/filebrowser:latest";
     ports = [ "8088:80" ];
@@ -28,8 +24,6 @@
       "/var/lib/filebrowser:/config"
       "/var/lib/filebrowser:/database"
     ];
-    # Мы явно приказываем запускать процесс от имени нашего
-    # нового, доверенного пользователя.
-    user = "filebrowser";
+    # Мы убираем 'user = "filebrowser";', так как этого пользователя не существует в контейнере.
   };
 }
