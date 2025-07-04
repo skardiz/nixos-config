@@ -1,4 +1,6 @@
-# ./hosts/shershulya/default.nix (РАБОЧАЯ ВЕРСИЯ БЕЗ NIX-INDEX)
+# ./hosts/shershulya/default.nix
+#
+# Финальная, единственно правильная версия от Дедушки-Кузнеца
 { config, pkgs, inputs, lib, ... }:
 
 {
@@ -12,12 +14,20 @@
 
   sops = {
     age.keyFile = "/etc/sops/keys/sops.key";
-    secrets.github_token.sopsFile = ../../secrets.yaml;
-    secrets.vpn_private_key.sopsFile = ../../secrets.yaml;
+    defaultSopsFile = ../../secrets.yaml; # Для удобства можно указать файл по умолчанию
+    secrets = {
+      vpn_private_key = {}; # sops сам найдет его в defaultSopsFile
+      github_token = {
+        # --- ВОТ ОНО, ИСТИННОЕ ЛЕКАРСТВО ---
+        # Эта строка говорит: "Этот секрет нужен пользователям.
+        # Подготовь его ДО активации Home Manager".
+        # Это разрывает цикл зависимости.
+        neededForUsers = true;
+      };
+    };
   };
 
-  # Мы оставляем эту строку. Она не виновата. Виновата попытка
-  # использовать ее для публичных репозиториев.
+  # Эта настройка остается. Она правильная.
   nix.settings.access-tokens = "github.com=${config.sops.secrets.github_token.path}";
 
   networking.hostName = "shershulya";
