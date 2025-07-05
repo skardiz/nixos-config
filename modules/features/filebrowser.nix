@@ -1,10 +1,10 @@
 # modules/features/filebrowser.nix
 #
-# Здесь мы наносим Печать Прохода.
+# Здесь мы ставим крест на карте.
 { pkgs, ... }:
 
 {
-  # Эта часть была правильной.
+  # Эта часть правильная.
   systemd.tmpfiles.rules = [
     "d /run/filebrowser 0755 root root -"
     "d /var/lib/filebrowser 0755 root root -"
@@ -13,15 +13,17 @@
   virtualisation.oci-containers.containers.filebrowser = {
     image = "filebrowser/filebrowser:latest";
     ports = [ "8088:8080" ];
-
-    # --- ВОТ ОНО, ИСТИННОЕ ЗАКЛИНАНИЕ ---
-    # Мы добавляем :z в конец нашего портала в сокровищницу.
     volumes = [
-      "/home/alex/Загрузки:/srv:z"
+      "/home/alex/Загрузки:/srv:z" # Печать Прохода оставляем, она не мешает.
       "filebrowser-data:/config:z"
       "filebrowser-data:/database:z"
     ];
 
-    cmd = [ "--port=8080" ];
+    # --- ВОТ ОНО, ИСТИННОЕ ЛЕКАРСТВО ---
+    # Мы явно приказываем приложению считать своей корневой папкой /srv.
+    cmd = [
+      "--port=8080"
+      "--root=/srv"
+    ];
   };
 }
