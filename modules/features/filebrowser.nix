@@ -1,29 +1,27 @@
 # modules/features/filebrowser.nix
 #
-# Здесь мы отменяем указ Лже-Императора.
+# Здесь мы наносим Печать Прохода.
 { pkgs, ... }:
 
 {
-  # Эта часть правильная. Она создает папки для состояния.
+  # Эта часть была правильной.
   systemd.tmpfiles.rules = [
-    "d /var/lib/filebrowser 0755 root root -"
     "d /run/filebrowser 0755 root root -"
+    "d /var/lib/filebrowser 0755 root root -"
   ];
 
   virtualisation.oci-containers.containers.filebrowser = {
     image = "filebrowser/filebrowser:latest";
     ports = [ "8088:8080" ];
+
+    # --- ВОТ ОНО, ИСТИННОЕ ЗАКЛИНАНИЕ ---
+    # Мы добавляем :z в конец нашего портала в сокровищницу.
     volumes = [
-      "/home/alex/Загрузки:/srv"
+      "/home/alex/Загрузки:/srv:z"
       "filebrowser-data:/config"
       "filebrowser-data:/database"
     ];
 
-    # --- ВОТ ОНО, ИСТИННОЕ ЛЕКАРСТВО ---
-    # Мы просто указываем порт. Больше ничего не нужно.
-    # --no-healthcheck было моей ошибкой.
-    cmd = [
-      "--port=8080"
-    ];
+    cmd = [ "--port=8080" ];
   };
 }
