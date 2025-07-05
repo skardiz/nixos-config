@@ -18,8 +18,8 @@
     # Мы добавляем :z в конец нашего портала в сокровищницу.
     volumes = [
       "/home/alex/Загрузки:/srv:z"
-      "filebrowser-data:/config"
-      "filebrowser-data:/database"
+      "filebrowser-data:/config:z"
+      "filebrowser-data:/database:z"
     ];
 
     cmd = [ "--port=8080" ];
