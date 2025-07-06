@@ -7,6 +7,7 @@
     sops
     gnupg
     pinentry-curses
+    anydesk
     #thorium-browser
   ];
 }
