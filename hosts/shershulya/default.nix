@@ -10,7 +10,6 @@
     ../../modules/roles/developer.nix
     ../../modules/hardware/nvidia-pascal.nix
     ../../modules/hardware/intel-cpu.nix
-    ../../modules/features/filebrowser.nix
   ];
 
   sops = {
