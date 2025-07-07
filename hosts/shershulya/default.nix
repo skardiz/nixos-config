@@ -10,6 +10,7 @@
     ../../modules/roles/developer.nix
     ../../modules/hardware/nvidia-pascal.nix
     ../../modules/hardware/intel-cpu.nix
+    ../../modules/features/vpn.nix
   ];
 
   sops = {
