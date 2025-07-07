@@ -19,6 +19,7 @@
   environment.etc."amnezia/amneziawg/awg0.conf" = {
     text = ''
       [Interface]
+      # ВАЖНО: Вставь сюда свой СУЩЕСТВУЮЩИЙ PrivateKey!
       PrivateKey = ${vpnKey}
       Address = 10.8.0.4/24
       DNS = 1.1.1.1
@@ -47,4 +48,13 @@
   systemd.services.amnezia-vpn = {
     description = "AmneziaWG auto-connect service";
     after = [ "network-online.target" ];
-    wants = [ "network-online.target
+    wants = [ "network-online.target" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.amneziawg-tools}/bin/awg-quick up awg0";
+      ExecStop = "${pkgs.amneziawg-tools}/bin/awg-quick down awg0";
+    };
+  };
+}
