@@ -2,13 +2,12 @@
 { pkgs, config, ... }:
 {
   imports = [
-    ../_common # Импортируем ВСЕ общие настройки
+    ../_common
     ./packages.nix
   ];
 
-  # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
-  # Алекс включает себе дополнительный набор пакетов для разработки
-  my.home.packages = {
-    dev = true;
-  };
+  my.home.packages.dev = true;
+
+  # --- НАЖИМАЕМ КНОПКУ ---
+  my.home.enableUserSshKey = true;
 }
