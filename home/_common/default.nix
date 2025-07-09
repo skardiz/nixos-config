@@ -1,11 +1,13 @@
 # home/_common/default.nix
-{ pkgs, inputs, config, ... }: # Убедитесь, что 'config' здесь есть
+{ pkgs, inputs, config, ... }:
 
 {
   imports = [
-    inputs.sops-nix.homeManagerModules.sops,
-    ./options.nix,
-    ./git.nix,
+    # --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ ЗДЕСЬ ---
+    # Мы убираем все запятые из этого списка.
+    inputs.sops-nix.homeManagerModules.sops
+    ./options.nix
+    ./git.nix
     ./waydroid-idle.nix
   ];
 
