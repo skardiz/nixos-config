@@ -1,14 +1,15 @@
 # home/_common/default.nix
-{ pkgs, inputs, ... }: # <-- Добавьте 'inputs' в аргументы
+# Финальная, исправленная версия
+{ pkgs, inputs, ... }: # <-- Убедитесь, что здесь есть 'inputs'
 
 {
   imports = [
     # --- ВОТ ОНО, ФИНАЛЬНОЕ РЕШЕНИЕ ---
-    # Мы подключаем модуль sops-nix для Home Manager.
-    # Теперь система будет знать, что такое "sops.secrets".
+    # Эта строка "учит" Home Manager понимать опции sops.*.
+    # Она подключает модуль, который определяет 'sops.secrets'.
     inputs.sops-nix.homeManagerModules.sops,
 
-    # Все остальные ваши импорты остаются на месте
+    # Ваши существующие импорты остаются на месте
     ./options.nix,
     ./git.nix,
     ./waydroid-idle.nix
