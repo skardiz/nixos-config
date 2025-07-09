@@ -13,30 +13,28 @@
   # 1. Учреждаем группу 'sops' для управления доступом к ключу
   users.groups.sops = {};
 
-  # 2. Сообщаем sops-nix, где будет лежать ключ
+  # 2. Сообщаем системному sops-nix, где будет лежать ключ
   sops.age.keyFile = "/etc/sops/keys/sops.key";
 
   sops.defaultSopsFile = ../../secrets.yaml;
   # 3. Объявляем ВСЕ секреты здесь, на уровне системы
   sops.secrets = {
     vpn_private_key = {};
-    github_token = { neededForUsers = true; };
-    user_alex_ssh_private_key = { neededForUsers = true; };
+    github_token = {}; # neededForUsers = true здесь больше не нужно, гонка решена иначе
+    user_alex_ssh_private_key = {};
   };
 
-  # --- ФИНАЛЬНОЕ РЕШЕНИЕ (ЧАСТЬ 1): "РАЗРЕШЕНИЕ НА СУЩЕСТВОВАНИЕ" ---
-  # Мы декларативно управляем файлом ключа, чтобы NixOS его не удаляла.
-  # Источник - НЕ в /nix/store, а по абсолютному пути, что решает проблему безопасности.
+  # 4. "Разрешение на существование": Декларативно управляем файлом ключа,
+  # чтобы NixOS его не удаляла. Источник - абсолютный путь к вашему найденному ключу.
   environment.etc."sops/keys/sops.key" = {
-    source = "/home/alex/.config/sops/age/keys.txt"; # Путь к вашему найденному ключу
+    source = "/home/alex/.config/sops/age/keys.txt";
     group = "sops";
     mode = "0440"; # Чтение для root и группы 'sops'
   };
 
-  # --- ФИНАЛЬНОЕ РЕШЕНИЕ (ЧАСТЬ 2): "ПОРЯДОК ДЕЙСТВИЙ" ---
-  # Мы решаем "гонку состояний" для ОБОИХ скриптов, которые использует sops-nix.
+  # 5. "Порядок действий": Решаем "гонку состояний" для скрипта, который
+  # использует sops для системных нужд.
   system.activationScripts.setupSecrets.deps = [ "etc" ];
-  system.activationScripts.setupSecretsForUsers.deps = [ "etc" ];
 
   nix.settings.access-tokens = "github.com=${config.sops.secrets.github_token.path}";
   networking.hostName = "shershulya";
@@ -46,7 +44,7 @@
     alex = {
       isMainUser = true;
       description = "Alex";
-      # Даем Алексу доступ к группе 'sops', чтобы его Home Manager мог читать ключ
+      # Даем Алексу доступ к группе 'sops', чтобы его Home Manager мог прочитать ключ
       extraGroups = [ "adbusers" "sops" ];
       home = { enableUserSshKey = true; };
     };

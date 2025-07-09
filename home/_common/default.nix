@@ -1,11 +1,11 @@
-# home/_common/default.nix
+# home/_common/default.nix9
 { pkgs, inputs, ... }:
 
 {
   imports = [
-    inputs.sops-nix.homeManagerModules.sops,
-    ./options.nix,
-    ./git.nix,
+    inputs.sops-nix.homeManagerModules.sops
+    ./options.nix
+    ./git.nix
     ./waydroid-idle.nix
   ];
 
