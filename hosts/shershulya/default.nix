@@ -7,52 +7,43 @@
     ../../modules/roles/desktop.nix
     ../../modules/roles/developer.nix
     ../../modules/hardware/nvidia-pascal.nix
-    # Если у вас есть другие импорты, например, vpn.nix, оставьте их
     # ../../modules/features/vpn.nix
   ];
 
-  # Учреждаем группу, которой будет дозволено читать ключ
-  users.groups.sops = {};
+  # Мы больше НЕ создаем группу sops.
 
-  # Мы просто говорим системному sops-nix, где лежит ЕГО ключ.
-  sops.age.keyFile = "/etc/sops/keys/sops.key";
+  # Системный sops-nix теперь САМ управляет своим ключом.
+  # Он создаст /etc/sops/keys/sops.key из этого источника
+  # и установит на него права "только для root".
+  sops.age.keyFile = "${self}/sops.key";
 
   sops.defaultSopsFile = ../../secrets.yaml;
+  # Система отвечает ТОЛЬКО за системные секреты.
   sops.secrets = {
     # vpn_private_key = {};
     github_token = { neededForUsers = true; };
   };
 
-  # Мы берем на себя ответственность за создание файла ключа
-  environment.etc."sops/keys/sops.key" = {
-    source = "${self}/sops.key"; # Предполагается, что sops.key лежит в корне проекта
-    group = "sops";
-    mode = "0440"; # Чтение для владельца (root) и группы (sops)
-  };
-
-  # --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ ЗДЕСЬ ---
-  # Мы устанавливаем зависимость для ПРАВИЛЬНОГО имени скрипта,
-  # который используется для секретов с 'neededForUsers = true'.
-  # Имя этого скрипта - "setupSecretsForUsers".
-  system.activationScripts.setupSecretsForUsers.deps = [ "etc" ];
+  # Мы больше НЕ используем environment.etc или activationScripts для ключа.
+  # sops-nix теперь делает все сам, атомарно и без конфликтов.
 
   nix.settings.access-tokens = "github.com=${config.sops.secrets.github_token.path}";
   networking.hostName = "shershulya";
   system.stateVersion = "25.11";
 
-  # Принимаем пользователей в группу 'sops', даруя им право читать ключ
   my.users.accounts = {
     alex = {
       isMainUser = true;
       description = "Alex";
-      extraGroups = [ "adbusers" "sops" ];
+      # Группа sops больше не нужна
+      extraGroups = [ "adbusers" ];
       home = {
         enableUserSshKey = true;
       };
     };
     mari = {
       description = "Mari";
-      extraGroups = []; # Мари НЕ состоит в группе sops
+      extraGroups = [];
       home = {
         enableUserSshKey = false;
       };
