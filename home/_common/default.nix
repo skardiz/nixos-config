@@ -13,6 +13,12 @@
     ./waydroid-idle.nix
   ];
 
+ # --- ВОТ ОНО, ИСПРАВЛЕНИЕ ---
+  # Мы сообщаем личному sops-nix, где находится ключ, который
+  # ему разрешено читать благодаря членству в группе 'sops'.
+  # Это устраняет ошибку "No key source configured".
+  sops.age.keyFile = "/etc/sops/keys/sops.key";
+
   # Базовые настройки Home Manager (без изменений)
   nixpkgs.config.allowUnfree = true;
   home.stateVersion = "25.11";
