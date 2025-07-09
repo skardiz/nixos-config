@@ -1,12 +1,16 @@
 # home/_common/default.nix
-{ pkgs, ... }:
+{ pkgs, inputs, ... }: # <-- Добавьте 'inputs' в аргументы
+
 {
   imports = [
-    # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
-    # Подключаем наш новый "Пульт Управления"
-    ./options.nix
+    # --- ВОТ ОНО, ФИНАЛЬНОЕ РЕШЕНИЕ ---
+    # Мы подключаем модуль sops-nix для Home Manager.
+    # Теперь система будет знать, что такое "sops.secrets".
+    inputs.sops-nix.homeManagerModules.sops,
 
-    ./git.nix
+    # Все остальные ваши импорты остаются на месте
+    ./options.nix,
+    ./git.nix,
     ./waydroid-idle.nix
   ];
 
@@ -14,12 +18,8 @@
   nixpkgs.config.allowUnfree = true;
   home.stateVersion = "25.11";
 
-  # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
-  # Убираем жестко закодированный список пакетов
-  # home.packages = [ ... ];
-
   # Декларативно включаем наборы пакетов, общие для всех пользователей
   my.home.packages = {
-    common = true; # Включаем базовый набор для всех
+    common = true;
   };
 }
