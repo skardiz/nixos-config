@@ -1,7 +1,5 @@
-# modules/users.nix
-#
-# Наш собственный, высокоуровневый модуль для управления пользователями.
-{ lib, config, self, inputs, mylib, ... }: # <-- Добавляем 'mylib' в аргументы
+# modules/system/users.nix
+{ lib, config, self, inputs, mylib, ... }:
 
 let
   cfg = config.my.users;
@@ -22,6 +20,14 @@ in
           default = [];
           description = "Дополнительные группы для пользователя.";
         };
+
+        # --- ФИКС №1: Мы объявляем, что у каждого пользователя МОЖЕТ БЫТЬ блок 'home' ---
+        # Теперь система не будет выдавать ошибку "option does not exist".
+        home = lib.mkOption {
+          type = lib.types.attrs;
+          default = {};
+          description = "Настройки Home Manager, специфичные для этого хоста.";
+        };
       };
     });
     default = {};
@@ -30,7 +36,7 @@ in
 
   # --- Генерируем конфигурацию на основе нашего API ---
   config = {
-    # 1. Генерируем блок users.users
+    # 1. Генерируем блок users.users (без изменений)
     users.users = lib.mapAttrs
       (name: userCfg: {
         isNormalUser = true;
@@ -41,18 +47,18 @@ in
 
     # 2. Генерируем блок home-manager.users
     home-manager.users = lib.mapAttrs
-      (name: _:
-        # Мы строим "чистый" путь от корня проекта, используя 'self'.
-        import "${self}/home/${name}"
+      (name: userCfg:
+        # --- ФИКС №2: Мы объединяем общий файл пользователя (/home/alex/default.nix)
+        # с настройками из блока 'home', который мы определили в хосте.
+        # Это позволяет передавать 'enableUserSshKey = true;' из хоста в Home Manager.
+        (import "${self}/home/${name}") // { my.home = userCfg.home; }
       )
       cfg.accounts;
 
-    # --- ИСПРАВЛЕНИЕ ЗДЕСЬ! ---
-    # 3. Передаем ВСЕ необходимые аргументы в модули Home Manager.
-    # Раньше здесь не было 'mylib' и 'self'.
+    # 3. Передаем ВСЕ необходимые аргументы в модули Home Manager (без изменений)
     home-manager.extraSpecialArgs = { inherit inputs self mylib; };
 
-    # 4. Генерируем блок автологина для основного пользователя
+    # 4. Генерируем блок автологина (без изменений)
     services.displayManager.autoLogin =
       let
         mainUsers = lib.filterAttrs (name: userCfg: userCfg.isMainUser) cfg.accounts;
