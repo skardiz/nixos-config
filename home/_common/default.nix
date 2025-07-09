@@ -3,8 +3,8 @@
 {
   imports = [
     inputs.sops-nix.homeManagerModules.sops,
-    ./options.nix,
-    ./git.nix,
+    ./options.nix
+    ./git.nix
     ./waydroid-idle.nix
   ];
 
