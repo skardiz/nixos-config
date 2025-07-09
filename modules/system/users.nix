@@ -5,24 +5,13 @@ let
   cfg = config.my.users;
 in
 {
-  # --- Объявляем наш API для пользователей ---
+  # --- Объявляем наш API для пользователей (включая опцию 'home') ---
   options.my.users.accounts = lib.mkOption {
     type = with lib.types; attrsOf (submodule {
       options = {
         isMainUser = lib.mkEnableOption "Этот пользователь является основным (для автологина)";
-        description = lib.mkOption {
-          type = str;
-          default = "";
-          description = "Полное имя пользователя.";
-        };
-        extraGroups = lib.mkOption {
-          type = listOf str;
-          default = [];
-          description = "Дополнительные группы для пользователя.";
-        };
-
-        # --- ФИКС №1: Мы объявляем, что у каждого пользователя МОЖЕТ БЫТЬ блок 'home' ---
-        # Теперь система не будет выдавать ошибку "option does not exist".
+        description = lib.mkOption { type = str; default = ""; };
+        extraGroups = lib.mkOption { type = listOf str; default = []; };
         home = lib.mkOption {
           type = lib.types.attrs;
           default = {};
@@ -31,7 +20,6 @@ in
       };
     });
     default = {};
-    description = "Декларативное описание всех пользователей в системе.";
   };
 
   # --- Генерируем конфигурацию на основе нашего API ---
@@ -45,14 +33,17 @@ in
       })
       cfg.accounts;
 
-    # 2. Генерируем блок home-manager.users
+    # --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ ЗДЕСЬ ---
+    # 2. Генерируем блок home-manager.users ПРАВИЛЬНО
     home-manager.users = lib.mapAttrs
-      (name: userCfg:
-        # --- ФИКС №2: Мы объединяем общий файл пользователя (/home/alex/default.nix)
-        # с настройками из блока 'home', который мы определили в хосте.
-        # Это позволяет передавать 'enableUserSshKey = true;' из хоста в Home Manager.
-        (import "${self}/home/${name}") // { my.home = userCfg.home; }
-      )
+      (name: userCfg: {
+        # Мы НЕ импортируем файл здесь. Мы говорим home-manager, ЧТО ему нужно импортировать.
+        # Это ключ к решению.
+        imports = [ "${self}/home/${name}" ];
+
+        # Теперь мы можем безопасно добавить host-specific настройки из 'home'.
+        my.home = userCfg.home;
+      })
       cfg.accounts;
 
     # 3. Передаем ВСЕ необходимые аргументы в модули Home Manager (без изменений)
