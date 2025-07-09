@@ -33,8 +33,8 @@
   # --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ ЗДЕСЬ ---
   # Мы устанавливаем зависимость для ПРАВИЛЬНОГО имени скрипта,
   # который используется для секретов с 'neededForUsers = true'.
-  # Имя скрипта по умолчанию - "setupSecrets".
-  system.activationScripts.setupSecrets.deps = [ "etc" ];
+  # Имя этого скрипта - "setupSecretsForUsers".
+  system.activationScripts.setupSecretsForUsers.deps = [ "etc" ];
 
   nix.settings.access-tokens = "github.com=${config.sops.secrets.github_token.path}";
   networking.hostName = "shershulya";
@@ -48,16 +48,13 @@
       extraGroups = [ "adbusers" "sops" ];
       home = {
         enableUserSshKey = true;
-        # Если у вас были другие опции, например packages.dev, они тоже должны быть здесь
-        # packages.dev = true;
       };
     };
     mari = {
       description = "Mari";
       extraGroups = []; # Мари НЕ состоит в группе sops
       home = {
-        enableUserSshKey = false; # Явно выключаем для Мари
-        # packages.dev = false;
+        enableUserSshKey = false;
       };
     };
   };
