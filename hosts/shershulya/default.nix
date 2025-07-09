@@ -1,5 +1,5 @@
 # hosts/shershulya/default.nix
-{ inputs, self, mylib, config, pkgs, lib, ... }:
+{ config, pkgs, inputs, lib, self, mylib, ... }: # Добавьте self и mylib
 
 {
   imports = [
@@ -7,29 +7,52 @@
     ../../modules/roles/desktop.nix
     ../../modules/roles/developer.nix
     ../../modules/hardware/nvidia-pascal.nix
-    # ../../modules/features/vpn.nix # Если нужно
+    # ../../modules/hardware/intel-cpu.nix
+    ../../modules/features/vpn.nix
   ];
 
-  # Мы полностью убираем все, что связано с sops, из системной конфигурации.
-  # Никаких sops.age.keyFile, sops.secrets, environment.etc, users.groups.sops.
-  # Система больше не занимается секретами. Это задача Home Manager.
+  # Мы учреждаем группу 'sops' для управления доступом к ключу
+  users.groups.sops = {};
 
+  sops = {
+    age.keyFile = "/etc/sops/keys/sops.key"; # Используем ключ, который мы разместили вручную
+    defaultSopsFile = ../../secrets.yaml;
+    secrets = {
+      # Системный секрет для VPN
+      vpn_private_key = {};
+
+      # Системный секрет для Nix, который также нужен пользователю
+      github_token = {
+        neededForUsers = true;
+      };
+
+      # --- ВОТ ОНО ---
+      # Мы объявляем личный секрет здесь, на уровне системы,
+      # и помечаем, что он нужен пользователю.
+      user_alex_ssh_private_key = {
+        neededForUsers = true;
+      };
+    };
+  };
+
+  nix.settings.access-tokens = "github.com=${config.sops.secrets.github_token.path}";
   networking.hostName = "shershulya";
   system.stateVersion = "25.11";
 
-  # В extraGroups для пользователей больше не нужна группа 'sops'.
   my.users.accounts = {
     alex = {
       isMainUser = true;
       description = "Alex";
-      extraGroups = [ "adbusers" ];
+      # Даем Алексу доступ к группе 'sops', чтобы он мог читать секреты
+      extraGroups = [ "adbusers" "sops" ];
+      # Включаем опцию, которая будет использовать секрет
       home = {
         enableUserSshKey = true;
       };
     };
     mari = {
       description = "Mari";
-      extraGroups = [];
+      extraGroups = []; # Мари не имеет доступа к секретам
       home = {
         enableUserSshKey = false;
       };
