@@ -30,8 +30,11 @@
     mode = "0440"; # Чтение для владельца (root) и группы (sops)
   };
 
-  # Решение проблемы "гонки состояний"
-  system.activationScripts.sops-secrets.deps = [ "etc" ];
+  # --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ ЗДЕСЬ ---
+  # Мы устанавливаем зависимость для ПРАВИЛЬНОГО имени скрипта,
+  # который используется для секретов с 'neededForUsers = true'.
+  # Имя скрипта по умолчанию - "setupSecrets".
+  system.activationScripts.setupSecrets.deps = [ "etc" ];
 
   nix.settings.access-tokens = "github.com=${config.sops.secrets.github_token.path}";
   networking.hostName = "shershulya";
@@ -43,8 +46,6 @@
       isMainUser = true;
       description = "Alex";
       extraGroups = [ "adbusers" "sops" ];
-      # --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ ЗДЕСЬ ---
-      # Все опции, управляемые home-manager, должны быть внутри этого блока.
       home = {
         enableUserSshKey = true;
         # Если у вас были другие опции, например packages.dev, они тоже должны быть здесь
