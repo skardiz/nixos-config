@@ -3,17 +3,18 @@
 
 {
   imports = [
-    # Мы просто подключаем модуль sops для Home Manager.
-    inputs.sops-nix.homeManagerModules.sops
-    # И ваши остальные общие модули.
-    ./options.nix
-    ./git.nix
+    inputs.sops-nix.homeManagerModules.sops,
+    ./options.nix,
+    ./git.nix,
     ./waydroid-idle.nix
   ];
 
-  # Мы полностью убираем sops.age.keyFile и sops.defaultSopsFile отсюда.
-  # Home Manager автоматически найдет и использует секреты,
-  # подготовленные для него системным модулем благодаря 'neededForUsers = true'.
+  # --- ВОТ ОНО, ФИНАЛЬНОЕ РЕШЕНИЕ ---
+  # Мы явно и прямо сообщаем личному sops-nix, где находится тот же самый системный ключ.
+  # Это устраняет ошибку "No key source configured".
+  sops.age.keyFile = "/etc/sops/keys/sops.key";
+
+  # Указывать defaultSopsFile здесь не нужно, home-manager его унаследует.
 
   nixpkgs.config.allowUnfree = true;
   home.stateVersion = "25.11";
