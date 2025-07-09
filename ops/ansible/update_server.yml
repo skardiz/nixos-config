@@ -1,0 +1,15 @@
+# ops/ansible/update_server.yml
+#
+# Указ об обновлении всех систем в группе "ubuntu_servers".
+---
+- name: Update Ubuntu Server
+  hosts: ubuntu_servers
+  become: yes # Выполнять задачи с правами суперпользователя (sudo)
+  tasks:
+    - name: Update apt package cache
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Upgrade all system packages to the latest version
+      ansible.builtin.apt:
+        upgrade: dist
