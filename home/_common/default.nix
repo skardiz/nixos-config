@@ -4,10 +4,10 @@
 {
   imports = [
     # Мы просто подключаем модуль sops для Home Manager.
-    inputs.sops-nix.homeManagerModules.sops,
+    inputs.sops-nix.homeManagerModules.sops
     # И ваши остальные общие модули.
-    ./options.nix,
-    ./git.nix,
+    ./options.nix
+    ./git.nix
     ./waydroid-idle.nix
   ];
 
