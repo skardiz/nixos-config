@@ -1,5 +1,7 @@
 # home/alex/default.nix
 { pkgs, config, ... }:
+
+# --- НАЧАЛО ВОЗВРАЩАЕМОГО НАБОРА ---
 {
   imports = [
     ../_common
@@ -11,3 +13,4 @@
   # --- НАЖИМАЕМ КНОПКУ ---
   my.home.enableUserSshKey = true;
 }
+# --- КОНЕЦ ВОЗВРАЩАЕМОГО НАБОРА ---
