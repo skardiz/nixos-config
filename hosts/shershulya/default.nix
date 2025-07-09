@@ -7,25 +7,22 @@
     ../../modules/roles/desktop.nix
     ../../modules/roles/developer.nix
     ../../modules/hardware/nvidia-pascal.nix
-    # ../../modules/features/vpn.nix
+    # ../../modules/features/vpn.nix # Если нужно
   ];
 
-  # Мы больше НЕ создаем группу sops.
+  # Мы учреждаем группу 'sops' для управления доступом к ключу
+  users.groups.sops = {};
 
-  # Системный sops-nix теперь САМ управляет своим ключом.
-  # Он создаст /etc/sops/keys/sops.key из этого источника
-  # и установит на него права "только для root".
-  sops.age.keyFile = "${self}/sops.key";
+  # Мы больше НЕ управляем файлом ключа через environment.etc или activationScripts.
+
+  # Мы просто сообщаем sops-nix, где найти ключ, который мы разместили вручную.
+  sops.age.keyFile = "/etc/sops/keys/sops.key";
 
   sops.defaultSopsFile = ../../secrets.yaml;
-  # Система отвечает ТОЛЬКО за системные секреты.
   sops.secrets = {
     # vpn_private_key = {};
-    github_token = { neededForUsers = true; };
+    github_token = {}; # neededForUsers здесь больше не нужно, так как нет гонки состояний
   };
-
-  # Мы больше НЕ используем environment.etc или activationScripts для ключа.
-  # sops-nix теперь делает все сам, атомарно и без конфликтов.
 
   nix.settings.access-tokens = "github.com=${config.sops.secrets.github_token.path}";
   networking.hostName = "shershulya";
@@ -35,15 +32,15 @@
     alex = {
       isMainUser = true;
       description = "Alex";
-      # Группа sops больше не нужна
-      extraGroups = [ "adbusers" ];
+      # Даем Алексу доступ к группе 'sops', чтобы его Home Manager мог прочитать ключ
+      extraGroups = [ "adbusers" "sops" ];
       home = {
         enableUserSshKey = true;
       };
     };
     mari = {
       description = "Mari";
-      extraGroups = [];
+      extraGroups = []; # Мари НЕ состоит в группе sops
       home = {
         enableUserSshKey = false;
       };

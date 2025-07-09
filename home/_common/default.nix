@@ -1,18 +1,17 @@
 # home/_common/default.nix
-{ pkgs, inputs, config, ... }:
+{ pkgs, inputs, ... }:
 
 {
   imports = [
-    # --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ ЗДЕСЬ ---
-    # Мы убираем все запятые из этого списка.
     inputs.sops-nix.homeManagerModules.sops
     ./options.nix
     ./git.nix
     ./waydroid-idle.nix
   ];
 
-  # Пользовательский sops-nix теперь использует СВОЙ ЛИЧНЫЙ ключ из домашней директории.
-  sops.age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
+  # Мы просто сообщаем личному sops-nix, где находится тот же самый системный ключ.
+  # Так как пользователь 'alex' в группе 'sops', у него будут права на чтение.
+  sops.age.keyFile = "/etc/sops/keys/sops.key";
 
   nixpkgs.config.allowUnfree = true;
   home.stateVersion = "25.11";
