@@ -62,6 +62,7 @@
       environment.systemPackages = [
         pkgs.git
         pkgs.nix-index
+        pkgs.openssh
       ];
       programs.nix-index.enable = true;
       programs.command-not-found.enable = false;
