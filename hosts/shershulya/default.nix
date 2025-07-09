@@ -7,7 +7,8 @@
     ../../modules/roles/desktop.nix
     ../../modules/roles/developer.nix
     ../../modules/hardware/nvidia-pascal.nix
-    ../../modules/features/vpn.nix
+    # Если у вас есть другие импорты, например, vpn.nix, оставьте их
+    # ../../modules/features/vpn.nix
   ];
 
   # Учреждаем группу, которой будет дозволено читать ключ
@@ -18,10 +19,8 @@
 
   sops.defaultSopsFile = ../../secrets.yaml;
   sops.secrets = {
-    vpn_private_key = {};
+    # vpn_private_key = {};
     github_token = { neededForUsers = true; };
-    # Секрет для SSH-ключа Алекса здесь больше не нужен,
-    # так как он будет управляться на уровне Home Manager
   };
 
   # Мы берем на себя ответственность за создание файла ключа
@@ -31,7 +30,7 @@
     mode = "0440"; # Чтение для владельца (root) и группы (sops)
   };
 
-  # --- ФИНАЛЬНОЕ РЕШЕНИЕ ГОНКИ СОСТОЯНИЙ ---
+  # Решение проблемы "гонки состояний"
   system.activationScripts.sops-secrets.deps = [ "etc" ];
 
   nix.settings.access-tokens = "github.com=${config.sops.secrets.github_token.path}";
@@ -43,15 +42,22 @@
     alex = {
       isMainUser = true;
       description = "Alex";
-      # Только Алекс состоит в группе sops
       extraGroups = [ "adbusers" "sops" ];
-      home.enableUserSshKey = true; # Ваша опция для активации sops в home-manager
+      # --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ ЗДЕСЬ ---
+      # Все опции, управляемые home-manager, должны быть внутри этого блока.
+      home = {
+        enableUserSshKey = true;
+        # Если у вас были другие опции, например packages.dev, они тоже должны быть здесь
+        # packages.dev = true;
+      };
     };
     mari = {
       description = "Mari";
-      # Мари НЕ состоит в группе sops
-      extraGroups = [];
-      home.enableUserSshKey = false; # У Мари эта опция выключена
+      extraGroups = []; # Мари НЕ состоит в группе sops
+      home = {
+        enableUserSshKey = false; # Явно выключаем для Мари
+        # packages.dev = false;
+      };
     };
   };
 }
