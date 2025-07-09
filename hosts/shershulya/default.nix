@@ -1,5 +1,5 @@
 # hosts/shershulya/default.nix
-{ config, pkgs, inputs, lib, self, mylib, ... }: # Добавьте self и mylib
+{ inputs, self, mylib, config, pkgs, lib, ... }:
 
 {
   imports = [
@@ -7,33 +7,36 @@
     ../../modules/roles/desktop.nix
     ../../modules/roles/developer.nix
     ../../modules/hardware/nvidia-pascal.nix
-    # ../../modules/hardware/intel-cpu.nix
     ../../modules/features/vpn.nix
   ];
 
-  # Мы учреждаем группу 'sops' для управления доступом к ключу
+  # 1. Учреждаем группу 'sops' для управления доступом к ключу
   users.groups.sops = {};
 
-  sops = {
-    age.keyFile = "/etc/sops/keys/sops.key"; # Используем ключ, который мы разместили вручную
-    defaultSopsFile = ../../secrets.yaml;
-    secrets = {
-      # Системный секрет для VPN
-      vpn_private_key = {};
+  # 2. Сообщаем sops-nix, где будет лежать ключ
+  sops.age.keyFile = "/etc/sops/keys/sops.key";
 
-      # Системный секрет для Nix, который также нужен пользователю
-      github_token = {
-        neededForUsers = true;
-      };
-
-      # --- ВОТ ОНО ---
-      # Мы объявляем личный секрет здесь, на уровне системы,
-      # и помечаем, что он нужен пользователю.
-      user_alex_ssh_private_key = {
-        neededForUsers = true;
-      };
-    };
+  sops.defaultSopsFile = ../../secrets.yaml;
+  # 3. Объявляем ВСЕ секреты здесь, на уровне системы
+  sops.secrets = {
+    vpn_private_key = {};
+    github_token = { neededForUsers = true; };
+    user_alex_ssh_private_key = { neededForUsers = true; };
   };
+
+  # --- ФИНАЛЬНОЕ РЕШЕНИЕ (ЧАСТЬ 1): "РАЗРЕШЕНИЕ НА СУЩЕСТВОВАНИЕ" ---
+  # Мы декларативно управляем файлом ключа, чтобы NixOS его не удаляла.
+  # Источник - НЕ в /nix/store, а по абсолютному пути, что решает проблему безопасности.
+  environment.etc."sops/keys/sops.key" = {
+    source = "/home/alex/.config/sops/age/keys.txt"; # Путь к вашему найденному ключу
+    group = "sops";
+    mode = "0440"; # Чтение для root и группы 'sops'
+  };
+
+  # --- ФИНАЛЬНОЕ РЕШЕНИЕ (ЧАСТЬ 2): "ПОРЯДОК ДЕЙСТВИЙ" ---
+  # Мы решаем "гонку состояний" для ОБОИХ скриптов, которые использует sops-nix.
+  system.activationScripts.setupSecrets.deps = [ "etc" ];
+  system.activationScripts.setupSecretsForUsers.deps = [ "etc" ];
 
   nix.settings.access-tokens = "github.com=${config.sops.secrets.github_token.path}";
   networking.hostName = "shershulya";
@@ -43,19 +46,14 @@
     alex = {
       isMainUser = true;
       description = "Alex";
-      # Даем Алексу доступ к группе 'sops', чтобы он мог читать секреты
+      # Даем Алексу доступ к группе 'sops', чтобы его Home Manager мог читать ключ
       extraGroups = [ "adbusers" "sops" ];
-      # Включаем опцию, которая будет использовать секрет
-      home = {
-        enableUserSshKey = true;
-      };
+      home = { enableUserSshKey = true; };
     };
     mari = {
       description = "Mari";
-      extraGroups = []; # Мари не имеет доступа к секретам
-      home = {
-        enableUserSshKey = false;
-      };
+      extraGroups = []; # Мари НЕ состоит в группе sops
+      home = { enableUserSshKey = false; };
     };
   };
 }
