@@ -11,6 +11,7 @@
     # Инструменты для Kubernetes
     minikube
     kubectl
+    ansible
 
     # Инструменты для Docker (docker-compose уже часть пакета docker,
     # но можно явно указать, если нужна конкретная версия)
