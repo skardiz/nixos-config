@@ -4,14 +4,12 @@
 
 {
   imports = [
-    # --- ВОТ ОНО, ФИНАЛЬНОЕ РЕШЕНИЕ ---
-    # Эта строка "учит" Home Manager понимать опции sops.*.
-    # Она подключает модуль, который определяет 'sops.secrets'.
-    inputs.sops-nix.homeManagerModules.sops,
+    # Эта строка "учит" Home Manager понимать опции sops.*
+    inputs.sops-nix.homeManagerModules.sops
 
-    # Ваши существующие импорты остаются на месте
-    ./options.nix,
-    ./git.nix,
+    # Ваши существующие импорты
+    ./options.nix
+    ./git.nix
     ./waydroid-idle.nix
   ];
 
