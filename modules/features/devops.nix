@@ -12,6 +12,7 @@
     minikube
     kubectl
     ansible
+    terraform
 
     # Инструменты для Docker (docker-compose уже часть пакета docker,
     # но можно явно указать, если нужна конкретная версия)
