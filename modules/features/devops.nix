@@ -13,6 +13,7 @@
     kubectl
     ansible
     terraform
+    yandex-cloud
 
     # Инструменты для Docker (docker-compose уже часть пакета docker,
     # но можно явно указать, если нужна конкретная версия)
